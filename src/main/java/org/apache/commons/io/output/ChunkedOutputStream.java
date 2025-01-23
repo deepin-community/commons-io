@@ -20,19 +20,83 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.build.AbstractStreamBuilder;
+
 /**
- * OutputStream which breaks larger output blocks into chunks.
- * Native code may need to copy the input array; if the write buffer
- * is very large this can cause OOME.
+ * OutputStream which breaks larger output blocks into chunks. Native code may need to copy the input array; if the write buffer is very large this can cause
+ * OOME.
+ * <p>
+ * To build an instance, see {@link Builder}
+ * </p>
  *
+ * @see Builder
  * @since 2.5
  */
 public class ChunkedOutputStream extends FilterOutputStream {
 
+    // @formatter:off
     /**
-     * The default chunk size to use, i.e. {@value} bytes.
+     * Builds a new {@link UnsynchronizedByteArrayOutputStream}.
+     *
+     * <p>
+     * Using File IO:
+     * </p>
+     * <pre>{@code
+     * UnsynchronizedByteArrayOutputStream s = UnsynchronizedByteArrayOutputStream.builder()
+     *   .setBufferSize(8192)
+     *   .get();
+     * }
+     * </pre>
+     * <p>
+     * Using NIO Path:
+     * </p>
+     * <pre>{@code
+     * UnsynchronizedByteArrayOutputStream s = UnsynchronizedByteArrayOutputStream.builder()
+     *   .setBufferSize(8192)
+     *   .get();
+     * }
+     * </pre>
+     *
+     * @see #get()
+     * @since 2.13.0
      */
-    private static final int DEFAULT_CHUNK_SIZE = 1024 * 4;
+    // @formatter:on
+    public static class Builder extends AbstractStreamBuilder<ChunkedOutputStream, Builder> {
+
+        /**
+         * Builds a new {@link UnsynchronizedByteArrayOutputStream}.
+         * <p>
+         * This builder use the following aspects:
+         * </p>
+         * <ul>
+         * <li>{@link #getInputStream()}</li>
+         * <li>{@link #getBufferSize()} (chunk size)</li>
+         * </ul>
+         *
+         * @return a new instance.
+         * @throws IllegalStateException         if the {@code origin} is {@code null}.
+         * @throws UnsupportedOperationException if the origin cannot be converted to an {@link OutputStream}.
+         * @throws IOException                   if an I/O error occurs.
+         * @see #getOutputStream()
+         * @see #getBufferSize()
+         */
+        @Override
+        public ChunkedOutputStream get() throws IOException {
+            return new ChunkedOutputStream(getOutputStream(), getBufferSize());
+        }
+
+    }
+
+    /**
+     * Constructs a new {@link Builder}.
+     *
+     * @return a new {@link Builder}.
+     * @since 2.13.0
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
 
     /**
      * The maximum chunk size to us when writing data arrays
@@ -40,35 +104,43 @@ public class ChunkedOutputStream extends FilterOutputStream {
     private final int chunkSize;
 
     /**
-     * Creates a new stream that uses the specified chunk size.
+     * Constructs a new stream that uses a chunk size of {@link IOUtils#DEFAULT_BUFFER_SIZE}.
      *
      * @param stream the stream to wrap
-     * @param chunkSize the chunk size to use; must be a positive number.
-     * @throws IllegalArgumentException if the chunk size is &lt;= 0
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
-    public ChunkedOutputStream(final OutputStream stream, final int chunkSize) {
-       super(stream);
-       if (chunkSize <= 0) {
-           throw new IllegalArgumentException();
-       }
-       this.chunkSize = chunkSize;
+    @Deprecated
+    public ChunkedOutputStream(final OutputStream stream) {
+        this(stream, IOUtils.DEFAULT_BUFFER_SIZE);
     }
 
     /**
-     * Creates a new stream that uses a chunk size of {@link #DEFAULT_CHUNK_SIZE}.
+     * Constructs a new stream that uses the specified chunk size.
      *
-     * @param stream the stream to wrap
+     * @param stream    the stream to wrap
+     * @param chunkSize the chunk size to use; must be a positive number.
+     * @throws IllegalArgumentException if the chunk size is &lt;= 0
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
-    public ChunkedOutputStream(final OutputStream stream) {
-        this(stream, DEFAULT_CHUNK_SIZE);
+    @Deprecated
+    public ChunkedOutputStream(final OutputStream stream, final int chunkSize) {
+        super(stream);
+        if (chunkSize <= 0) {
+            throw new IllegalArgumentException("chunkSize <= 0");
+        }
+        this.chunkSize = chunkSize;
+    }
+
+    int getChunkSize() {
+        return chunkSize;
     }
 
     /**
      * Writes the data buffer in chunks to the underlying stream
      *
-     * @param data the data to write
+     * @param data      the data to write
      * @param srcOffset the offset
-     * @param length the length of data to write
+     * @param length    the length of data to write
      *
      * @throws IOException if an I/O error occurs.
      */
@@ -76,7 +148,7 @@ public class ChunkedOutputStream extends FilterOutputStream {
     public void write(final byte[] data, final int srcOffset, final int length) throws IOException {
         int bytes = length;
         int dstOffset = srcOffset;
-        while(bytes > 0) {
+        while (bytes > 0) {
             final int chunk = Math.min(bytes, chunkSize);
             out.write(data, dstOffset, chunk);
             bytes -= chunk;

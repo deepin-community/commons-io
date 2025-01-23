@@ -29,33 +29,14 @@ import org.apache.commons.io.TaggedIOException;
 import org.junit.jupiter.api.Test;
 
 /**
- * JUnit Test Case for {@link TaggedOutputStream}.
+ * Tests {@link TaggedOutputStream}.
  */
 public class TaggedOutputStreamTest  {
 
     @Test
-    public void testNormalStream() {
-        try (final ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
-            try (final OutputStream stream = new TaggedOutputStream(buffer)) {
-                stream.write('a');
-                stream.write(new byte[] { 'b' });
-                stream.write(new byte[] { 'c' }, 0, 1);
-                stream.flush();
-            }
-            assertEquals(3, buffer.size());
-            assertEquals('a', buffer.toByteArray()[0]);
-            assertEquals('b', buffer.toByteArray()[1]);
-            assertEquals('c', buffer.toByteArray()[2]);
-        } catch (final IOException e) {
-            fail("Unexpected exception thrown");
-        }
-    }
-
-    @Test
     public void testBrokenStream() {
         final IOException exception = new IOException("test exception");
-        final TaggedOutputStream stream =
-            new TaggedOutputStream(new BrokenOutputStream(exception));
+        final TaggedOutputStream stream = new TaggedOutputStream(new BrokenOutputStream(exception));
 
         // Test the write() method
         try {
@@ -101,9 +82,27 @@ public class TaggedOutputStreamTest  {
     }
 
     @Test
+    public void testNormalStream() {
+        try (ByteArrayOutputStream buffer = new ByteArrayOutputStream()) {
+            try (OutputStream stream = new TaggedOutputStream(buffer)) {
+                stream.write('a');
+                stream.write(new byte[] { 'b' });
+                stream.write(new byte[] { 'c' }, 0, 1);
+                stream.flush();
+            }
+            assertEquals(3, buffer.size());
+            assertEquals('a', buffer.toByteArray()[0]);
+            assertEquals('b', buffer.toByteArray()[1]);
+            assertEquals('c', buffer.toByteArray()[2]);
+        } catch (final IOException e) {
+            fail("Unexpected exception thrown");
+        }
+    }
+
+    @Test
     public void testOtherException() throws Exception {
         final IOException exception = new IOException("test exception");
-        try (final TaggedOutputStream stream = new TaggedOutputStream(ClosedOutputStream.CLOSED_OUTPUT_STREAM)) {
+        try (TaggedOutputStream stream = new TaggedOutputStream(ClosedOutputStream.INSTANCE)) {
 
             assertFalse(stream.isCauseOf(exception));
             assertFalse(stream.isCauseOf(new TaggedIOException(exception, UUID.randomUUID())));

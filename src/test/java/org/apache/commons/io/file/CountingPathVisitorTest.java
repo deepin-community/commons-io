@@ -20,8 +20,6 @@ package org.apache.commons.io.file;
 import static org.apache.commons.io.file.CounterAssertions.assertCounts;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +30,11 @@ import org.junit.jupiter.params.provider.MethodSource;
  */
 public class CountingPathVisitorTest extends TestArguments {
 
+    private void checkZeroCounts(final CountingPathVisitor visitor) {
+        Assertions.assertEquals(CountingPathVisitor.withLongCounters(), visitor);
+        Assertions.assertEquals(CountingPathVisitor.withBigIntegerCounters(), visitor);
+    }
+
     /**
      * Tests an empty folder.
      */
@@ -39,11 +42,8 @@ public class CountingPathVisitorTest extends TestArguments {
     @MethodSource("countingPathVisitors")
     public void testCountEmptyFolder(final CountingPathVisitor visitor) throws IOException {
         checkZeroCounts(visitor);
-        final Path tempDir = Files.createTempDirectory(getClass().getCanonicalName());
-        try {
-            assertCounts(1, 0, 0, PathUtils.visitFileTree(visitor, tempDir));
-        } finally {
-            Files.deleteIfExists(tempDir);
+        try (TempDirectory tempDir = TempDirectory.create(getClass().getCanonicalName())) {
+            assertCounts(1, 0, 0, PathUtils.visitFileTree(visitor, tempDir.get()));
         }
     }
 
@@ -78,11 +78,6 @@ public class CountingPathVisitorTest extends TestArguments {
         checkZeroCounts(visitor);
         assertCounts(3, 2, 2, PathUtils.visitFileTree(visitor,
                 "src/test/resources/org/apache/commons/io/dirs-2-file-size-2"));
-    }
-
-    private void checkZeroCounts(final CountingPathVisitor visitor) {
-        Assertions.assertEquals(CountingPathVisitor.withLongCounters(), visitor);
-        Assertions.assertEquals(CountingPathVisitor.withBigIntegerCounters(), visitor);
     }
 
     @ParameterizedTest

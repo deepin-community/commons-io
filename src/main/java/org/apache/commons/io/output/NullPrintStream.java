@@ -20,7 +20,7 @@ package org.apache.commons.io.output;
 import java.io.PrintStream;
 
 /**
- * Writes all data to the famous <b>/dev/null</b>.
+ * Never prints data. Calls never go beyond this class.
  * <p>
  * This print stream has no destination (file/socket etc.) and all bytes written to it are ignored and lost.
  * </p>
@@ -31,15 +31,28 @@ public class NullPrintStream extends PrintStream {
 
     /**
      * The singleton instance.
+     *
+     * @since 2.12.0
      */
-    public static final NullPrintStream NULL_PRINT_STREAM = new NullPrintStream();
+    public static final NullPrintStream INSTANCE = new NullPrintStream();
+
+    /**
+     * The singleton instance.
+     *
+     * @deprecated Use {@link #INSTANCE}.
+     */
+    @Deprecated
+    public static final NullPrintStream NULL_PRINT_STREAM = INSTANCE;
 
     /**
      * Constructs an instance.
+     *
+     * @deprecated Use {@link #INSTANCE}.
      */
+    @Deprecated
     public NullPrintStream() {
         // Relies on the default charset which is OK since we are not actually writing.
-        super(NullOutputStream.NULL_OUTPUT_STREAM);
+        super(NullOutputStream.INSTANCE);
     }
 
 }

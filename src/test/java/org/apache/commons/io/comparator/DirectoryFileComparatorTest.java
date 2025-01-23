@@ -18,19 +18,20 @@ package org.apache.commons.io.comparator;
 
 import java.io.File;
 
+import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test case for {@link DirectoryFileComparator}.
+ * Tests {@link DirectoryFileComparator}.
  */
-public class DirectoryFileComparatorTest extends ComparatorAbstractTestCase {
+public class DirectoryFileComparatorTest extends ComparatorAbstractTest {
 
     @BeforeEach
     public void setUp() {
         comparator = (AbstractFileComparator) DirectoryFileComparator.DIRECTORY_COMPARATOR;
         reverse = DirectoryFileComparator.DIRECTORY_REVERSE;
-        final File currentDir = new File(".");
+        final File currentDir = FileUtils.current();
         equalFile1 = new File(currentDir, "src");
         equalFile2 = new File(currentDir, "src/site/xdoc");
         lessFile   = new File(currentDir, "src");

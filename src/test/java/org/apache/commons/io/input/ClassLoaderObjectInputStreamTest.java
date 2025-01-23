@@ -27,76 +27,23 @@ import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
+import org.apache.commons.lang3.SerializationUtils;
+import org.junit.jupiter.api.Test;
+
 /**
- * Tests the CountingInputStream.
- *
+ * Tests {@link ClassLoaderObjectInputStream}.
  */
 public class ClassLoaderObjectInputStreamTest {
 
-    /* Note: This test case tests the simplest functionality of
-     * ObjectInputStream.  IF we really wanted to test ClassLoaderObjectInputStream
-     * we would probably need to create a transient Class Loader. -TO
+    /**
+     * Note: This test case tests the simplest functionality of ObjectInputStream. IF we really wanted to test
+     * ClassLoaderObjectInputStream we would probably need to create a transient Class Loader. -TO
      */
-
-
-    @org.junit.jupiter.api.Test
-    public void testExpected() throws Exception {
-
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-        final Object input = Boolean.FALSE;
-        oos.writeObject(input);
-
-        final InputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        try (final ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(),
-                bais)) {
-            final Object result = clois.readObject();
-
-            assertEquals(input, result);
-        }
+    private enum E {
+        A, B, C
     }
 
-    @org.junit.jupiter.api.Test
-    public void testLong() throws Exception {
-
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-        final Object input = (long) 123;
-        oos.writeObject(input);
-
-        final InputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        try (final ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(),
-                bais)) {
-            final Object result = clois.readObject();
-
-            assertEquals(input, result);
-        }
-    }
-
-    @org.junit.jupiter.api.Test
-    public void testPrimitiveLong() throws Exception {
-
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-        final long input = 12345L;
-        oos.writeLong(input);
-        oos.close();
-
-        final InputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        try (final ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(),
-                bais)) {
-            final long result = clois.readLong();
-
-            assertEquals(input, result);
-        }
-    }
-
-    private enum E {A, B, C}
-
-    private static class Test implements Serializable {
+    private static final class TestFixture implements Serializable {
         private static final long serialVersionUID = 1L;
         private final int i;
 
@@ -104,21 +51,10 @@ public class ClassLoaderObjectInputStreamTest {
 
         private final E e;
 
-        Test(final int i, final Object o) {
+        TestFixture(final int i, final Object o) {
             this.i = i;
             this.e = E.A;
             this.o = o;
-        }
-
-        @Override
-        public boolean equals(final Object other) {
-            if (other instanceof Test) {
-                final Test tother = (Test) other;
-                return (this.i == tother.i)
-                        & (this.e == tother.e)
-                        & equalObject(tother.o);
-            }
-            return false;
         }
 
         private boolean equalObject(final Object other) {
@@ -129,77 +65,89 @@ public class ClassLoaderObjectInputStreamTest {
         }
 
         @Override
+        public boolean equals(final Object other) {
+            if (other instanceof TestFixture) {
+                final TestFixture tOther = (TestFixture) other;
+                return this.i == tOther.i & this.e == tOther.e & equalObject(tOther.o);
+            }
+            return false;
+        }
+
+        @Override
         public int hashCode() {
             return super.hashCode();
         }
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
+    public void testExpected() throws Exception {
+        final Boolean input = Boolean.FALSE;
+        final InputStream bais = new ByteArrayInputStream(SerializationUtils.serialize(input));
+        try (ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(), bais)) {
+            final Object result = clois.readObject();
+            assertEquals(input, result);
+        }
+    }
+
+    @Test
+    public void testLong() throws Exception {
+        final Long input = 123L;
+        final InputStream bais = new ByteArrayInputStream(SerializationUtils.serialize(input));
+        try (ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(), bais)) {
+            final Object result = clois.readObject();
+            assertEquals(input, result);
+        }
+    }
+
+    @Test
     public void testObject1() throws Exception {
-
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-        final Object input = new Test(123, null);
-        oos.writeObject(input);
-        oos.close();
-
-        final InputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        try (final ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(),
-                bais)) {
+        final TestFixture input = new TestFixture(123, null);
+        final InputStream bais = new ByteArrayInputStream(SerializationUtils.serialize(input));
+        try (ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(), bais)) {
             final Object result = clois.readObject();
-
             assertEquals(input, result);
         }
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     public void testObject2() throws Exception {
-
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-        final Object input = new Test(123, 0);
-        oos.writeObject(input);
-        oos.close();
-
-        final InputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        try (final ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(),
-                bais)) {
+        final TestFixture input = new TestFixture(123, 0);
+        final InputStream bais = new ByteArrayInputStream(SerializationUtils.serialize(input));
+        try (ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(), bais)) {
             final Object result = clois.readObject();
-
             assertEquals(input, result);
         }
     }
 
-    @org.junit.jupiter.api.Test
-    public void testResolveProxyClass() throws Exception {
-
+    @Test
+    public void testPrimitiveLong() throws Exception {
+        final long input = 12345L;
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final ObjectOutputStream oos = new ObjectOutputStream(baos);
-        oos.writeObject(Boolean.FALSE);
+        try (final ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeLong(input);
+        }
         final InputStream bais = new ByteArrayInputStream(baos.toByteArray());
+        try (ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(), bais)) {
+            final long result = clois.readLong();
+            assertEquals(input, result);
+        }
+    }
 
-        try (final ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(),
-                bais)) {
-            final String[] interfaces = { Comparable.class.getName() };
+    @Test
+    public void testResolveProxyClass() throws Exception {
+        final InputStream bais = new ByteArrayInputStream(SerializationUtils.serialize(Boolean.FALSE));
+        try (ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(), bais)) {
+            final String[] interfaces = {Comparable.class.getName()};
             final Class<?> result = clois.resolveProxyClass(interfaces);
             assertTrue(Comparable.class.isAssignableFrom(result), "Assignable");
         }
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     public void testResolveProxyClassWithMultipleInterfaces() throws Exception {
-
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        final ObjectOutputStream oos = new ObjectOutputStream(baos);
-        oos.writeObject(Boolean.FALSE);
-        final InputStream bais = new ByteArrayInputStream(baos.toByteArray());
-
-        try (final ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(),
-                bais)) {
-            final String[] interfaces = { Comparable.class.getName(), Serializable.class.getName(),
-                    Runnable.class.getName() };
+        final InputStream bais = new ByteArrayInputStream(SerializationUtils.serialize(Boolean.FALSE));
+        try (ClassLoaderObjectInputStream clois = new ClassLoaderObjectInputStream(getClass().getClassLoader(), bais)) {
+            final String[] interfaces = {Comparable.class.getName(), Serializable.class.getName(), Runnable.class.getName()};
             final Class<?> result = clois.resolveProxyClass(interfaces);
             assertTrue(Comparable.class.isAssignableFrom(result), "Assignable");
             assertTrue(Runnable.class.isAssignableFrom(result), "Assignable");

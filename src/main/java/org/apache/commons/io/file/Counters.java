@@ -43,8 +43,7 @@ public class Counters {
          * @param directoryCounter the directory counter.
          * @param fileCounter the file counter.
          */
-        protected AbstractPathCounters(final Counter byteCounter, final Counter directoryCounter,
-            final Counter fileCounter) {
+        protected AbstractPathCounters(final Counter byteCounter, final Counter directoryCounter, final Counter fileCounter) {
             this.byteCounter = byteCounter;
             this.directoryCounter = directoryCounter;
             this.fileCounter = fileCounter;
@@ -105,7 +104,7 @@ public class Counters {
     }
 
     /**
-     * Counts using a BigInteger number.
+     * Counts using a {@link BigInteger} number.
      */
     private static final class BigIntegerCounter implements Counter {
 
@@ -155,13 +154,13 @@ public class Counters {
         }
 
         @Override
-        public String toString() {
-            return value.toString();
+        public void reset() {
+            value = BigInteger.ZERO;
         }
 
         @Override
-        public void reset() {
-            value = BigInteger.ZERO;
+        public String toString() {
+            return value.toString();
         }
     }
 
@@ -174,7 +173,7 @@ public class Counters {
          * Constructs a new initialized instance.
          */
         protected BigIntegerPathCounters() {
-            super(Counters.bigIntegerCounter(), Counters.bigIntegerCounter(), Counters.bigIntegerCounter());
+            super(bigIntegerCounter(), bigIntegerCounter(), bigIntegerCounter());
         }
 
     }
@@ -227,7 +226,7 @@ public class Counters {
     }
 
     /**
-     * Counts using a long number.
+     * Counts using a {@code long} number.
      */
     private final static class LongCounter implements Counter {
 
@@ -277,13 +276,13 @@ public class Counters {
         }
 
         @Override
-        public String toString() {
-            return Long.toString(value);
+        public void reset() {
+            value = 0L;
         }
 
         @Override
-        public void reset() {
-            value = 0L;
+        public String toString() {
+            return Long.toString(value);
         }
     }
 
@@ -296,7 +295,7 @@ public class Counters {
          * Constructs a new initialized instance.
          */
         protected LongPathCounters() {
-            super(Counters.longCounter(), Counters.longCounter(), Counters.longCounter());
+            super(longCounter(), longCounter(), longCounter());
         }
 
     }
@@ -333,6 +332,17 @@ public class Counters {
             // noop
         }
 
+        /**
+         * Returns {@code "0"}, always.
+         *
+         * @return {@code "0"}, always.
+         * @since 2.12.0
+         */
+        @Override
+        public String toString() {
+            return "0";
+        }
+
     }
 
     /**
@@ -346,7 +356,7 @@ public class Counters {
          * Constructs a new initialized instance.
          */
         private NoopPathCounters() {
-            super(Counters.noopCounter(), Counters.noopCounter(), Counters.noopCounter());
+            super(noopCounter(), noopCounter(), noopCounter());
         }
 
     }
@@ -423,9 +433,9 @@ public class Counters {
     }
 
     /**
-     * Returns the NOOP Counter.
+     * Returns the no-op Counter.
      *
-     * @return the NOOP Counter.
+     * @return the no-op Counter.
      * @since 2.9.0
      */
     public static Counter noopCounter() {
@@ -433,9 +443,9 @@ public class Counters {
     }
 
     /**
-     * Returns the NOOP PathCounters.
+     * Returns the no-op PathCounters.
      *
-     * @return the NOOP PathCounters.
+     * @return the no-op PathCounters.
      * @since 2.9.0
      */
     public static PathCounters noopPathCounters() {

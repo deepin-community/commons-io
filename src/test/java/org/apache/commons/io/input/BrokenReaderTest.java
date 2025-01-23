@@ -17,102 +17,118 @@
 package org.apache.commons.io.input;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.io.Reader;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * JUnit Test Case for {@link BrokenReader}.
+ * Tests {@link BrokenReader}.
  */
-@SuppressWarnings("ResultOfMethodCallIgnored")
 public class BrokenReaderTest {
 
-    private IOException exception;
+    private static BrokenReader createBrokenReader(final Throwable exception) {
+        if (exception instanceof IOException) {
+            return new BrokenReader((IOException) exception);
+        }
+        return new BrokenReader(exception);
+    }
 
-    private Reader reader;
-
-    @BeforeEach
-    public void setUp() {
-        exception = new IOException("test exception");
-        reader = new BrokenReader(exception);
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testClose(final Class<Exception> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenReader brokenReader = createBrokenReader(exception);
+        assertEquals(exception, assertThrows(clazz, () -> brokenReader.close()));
     }
 
     @Test
-    public void testRead() {
-        try {
-            reader.read();
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
+    public void testInstance() {
+        assertNotNull(BrokenReader.INSTANCE);
+    }
 
-        try {
-            reader.read(new char[1]);
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testMark(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenReader brokenReader = createBrokenReader(exception);
+        assertEquals(exception, assertThrows(clazz, () -> brokenReader.mark(1)));
+    }
 
-        try {
-            reader.read(new char[1], 0, 1);
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testRead(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenReader brokenReader = createBrokenReader(exception);
+        assertEquals(exception, assertThrows(clazz, () -> brokenReader.read()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testReadCharArray(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenReader brokenReader = createBrokenReader(exception);
+        assertEquals(exception, assertThrows(clazz, () -> brokenReader.read(new char[1])));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testReadCharArrayIndexed(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenReader brokenReader = createBrokenReader(exception);
+        assertEquals(exception, assertThrows(clazz, () -> brokenReader.read(new char[1], 0, 1)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testReady(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenReader brokenReader = createBrokenReader(exception);
+        assertEquals(exception, assertThrows(clazz, () -> brokenReader.ready()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testReset(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenReader brokenReader = createBrokenReader(exception);
+        assertEquals(exception, assertThrows(clazz, () -> brokenReader.reset()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testSkip(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenReader brokenReader = createBrokenReader(exception);
+        assertEquals(exception, assertThrows(clazz, () -> brokenReader.skip(1)));
     }
 
     @Test
-    public void testSkip() {
-        try {
-            reader.skip(1);
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
-    }
+    public void testTryWithResources() {
+        final IOException thrown = assertThrows(IOException.class, () -> {
+            try (Reader newReader = new BrokenReader()) {
+                newReader.read();
+            }
+        });
+        assertEquals("Broken reader", thrown.getMessage());
 
-    @Test
-    public void testReady() {
-        try {
-            reader.ready();
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
-    }
-
-    @Test
-    public void testMark() {
-        try {
-            reader.mark(1);
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
-    }
-
-    @Test
-    public void testReset() {
-        try {
-            reader.reset();
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
-    }
-
-    @Test
-    public void testClose() {
-        try {
-            reader.close();
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
+        final Throwable[] suppressed = thrown.getSuppressed();
+        assertEquals(1, suppressed.length);
+        assertEquals(IOException.class, suppressed[0].getClass());
+        assertEquals("Broken reader", suppressed[0].getMessage());
     }
 
 }

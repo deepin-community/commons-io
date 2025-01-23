@@ -36,6 +36,10 @@ import org.apache.commons.io.file.Counters.PathCounters;
  */
 public class CopyDirectoryVisitor extends CountingPathVisitor {
 
+    private static CopyOption[] toCopyOption(final CopyOption... copyOptions) {
+        return copyOptions == null ? PathUtils.EMPTY_COPY_OPTIONS : copyOptions.clone();
+    }
+
     private final CopyOption[] copyOptions;
     private final Path sourceDirectory;
     private final Path targetDirectory;
@@ -48,12 +52,11 @@ public class CopyDirectoryVisitor extends CountingPathVisitor {
      * @param targetDirectory The target directory
      * @param copyOptions Specifies how the copying should be done.
      */
-    public CopyDirectoryVisitor(final PathCounters pathCounter, final Path sourceDirectory, final Path targetDirectory,
-        final CopyOption... copyOptions) {
+    public CopyDirectoryVisitor(final PathCounters pathCounter, final Path sourceDirectory, final Path targetDirectory, final CopyOption... copyOptions) {
         super(pathCounter);
         this.sourceDirectory = sourceDirectory;
         this.targetDirectory = targetDirectory;
-        this.copyOptions = copyOptions == null ? PathUtils.EMPTY_COPY_OPTIONS : copyOptions.clone();
+        this.copyOptions = toCopyOption(copyOptions);
     }
 
     /**
@@ -67,12 +70,12 @@ public class CopyDirectoryVisitor extends CountingPathVisitor {
      * @param copyOptions Specifies how the copying should be done.
      * @since 2.9.0
      */
-    public CopyDirectoryVisitor(final PathCounters pathCounter, final PathFilter fileFilter, final PathFilter dirFilter,
-        final Path sourceDirectory, final Path targetDirectory, final CopyOption... copyOptions) {
+    public CopyDirectoryVisitor(final PathCounters pathCounter, final PathFilter fileFilter, final PathFilter dirFilter, final Path sourceDirectory,
+        final Path targetDirectory, final CopyOption... copyOptions) {
         super(pathCounter, fileFilter, dirFilter);
         this.sourceDirectory = sourceDirectory;
         this.targetDirectory = targetDirectory;
-        this.copyOptions = copyOptions == null ? PathUtils.EMPTY_COPY_OPTIONS : copyOptions.clone();
+        this.copyOptions = toCopyOption(copyOptions);
     }
 
     /**

@@ -33,7 +33,7 @@ import java.nio.file.attribute.BasicFileAttributes;
  * </p>
  * <h2>Using Classic IO</h2>
  * <pre>
- * File dir = new File(".");
+ * File dir = FileUtils.current();
  * String[] files = dir.list(new SizeFileFilter(1024 * 1024));
  * for (String file : files) {
  *     System.out.println(file);
@@ -42,7 +42,7 @@ import java.nio.file.attribute.BasicFileAttributes;
  *
  * <h2>Using NIO</h2>
  * <pre>
- * final Path dir = Paths.get("");
+ * final Path dir = PathUtils.current();
  * final AccumulatorPathVisitor visitor = AccumulatorPathVisitor.withLongCounters(new SizeFileFilter(1024 * 1024));
  * //
  * // Walk one dir
@@ -58,6 +58,10 @@ import java.nio.file.attribute.BasicFileAttributes;
  * System.out.println(visitor.getDirList());
  * System.out.println(visitor.getFileList());
  * </pre>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.2
  * @see FileFilterUtils#sizeFileFilter(long)
@@ -116,7 +120,7 @@ public class SizeFileFilter extends AbstractFileFilter implements Serializable {
      */
     @Override
     public boolean accept(final File file) {
-        return accept(file.length());
+        return accept(file != null ? file.length() : 0);
     }
 
     private boolean accept(final long length) {
@@ -137,11 +141,7 @@ public class SizeFileFilter extends AbstractFileFilter implements Serializable {
      */
     @Override
     public FileVisitResult accept(final Path file, final BasicFileAttributes attributes) {
-        try {
-            return toFileVisitResult(accept(Files.size(file)), file);
-        } catch (final IOException e) {
-            return handle(e);
-        }
+        return get(() -> toFileVisitResult(accept(Files.size(file))));
     }
 
     /**
@@ -157,7 +157,7 @@ public class SizeFileFilter extends AbstractFileFilter implements Serializable {
 
     @Override
     public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
-        return toFileVisitResult(accept(Files.size(file)), file);
+        return toFileVisitResult(accept(Files.size(file)));
     }
 
 }

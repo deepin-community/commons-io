@@ -19,6 +19,7 @@ package org.apache.commons.io.input;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,9 +36,8 @@ public class CircularInputStreamTest {
     private void assertStreamOutput(final byte[] toCycle, final byte[] expected) throws IOException {
         final byte[] actual = new byte[expected.length];
 
-        try (InputStream infStream = createInputStream(toCycle, -1)) {
-            final int actualReadBytes = infStream.read(actual);
-
+        try (InputStream inputStream = createInputStream(toCycle, -1)) {
+            final int actualReadBytes = inputStream.read(actual);
             assertArrayEquals(expected, actual);
             assertEquals(expected.length, actualReadBytes);
         }
@@ -45,6 +45,29 @@ public class CircularInputStreamTest {
 
     private InputStream createInputStream(final byte[] repeatContent, final long targetByteCount) {
         return new CircularInputStream(repeatContent, targetByteCount);
+    }
+
+    @SuppressWarnings("resource")
+    @Test
+    public void testAvailableAfterClose() throws Exception {
+        final InputStream shadow;
+        try (InputStream in = createInputStream(new byte[] { 1, 2 }, 4)) {
+            assertTrue(in.available() > 0);
+            assertEquals(1, in.read());
+            assertEquals(2, in.read());
+            assertEquals(1, in.read());
+            shadow = in;
+        }
+        assertEquals(0, shadow.available());
+    }
+
+    @Test
+    public void testAvailableAfterOpen() throws Exception {
+        try (InputStream in = createInputStream(new byte[] { 1, 2 }, 1)) {
+            assertTrue(in.available() > 0);
+            assertEquals(1, in.read());
+            assertTrue(in.available() > 0);
+        }
     }
 
     @Test
@@ -83,13 +106,26 @@ public class CircularInputStreamTest {
     public void testCycleBytes() throws IOException {
         final byte[] input = { 1, 2 };
         final byte[] expected = { 1, 2, 1, 2, 1 };
-
         assertStreamOutput(input, expected);
     }
 
     @Test
     public void testNullInputSize0() {
         assertThrows(NullPointerException.class, () -> createInputStream(null, 0));
+    }
+
+    @SuppressWarnings("resource")
+    @Test
+    public void testReaderAfterClose() throws Exception {
+        final InputStream shadow;
+        try (InputStream in = createInputStream(new byte[] { 1, 2 }, 4)) {
+            assertTrue(in.available() > 0);
+            assertEquals(1, in.read());
+            assertEquals(2, in.read());
+            assertEquals(1, in.read());
+            shadow = in;
+        }
+        assertEquals(IOUtils.EOF, shadow.read());
     }
 
     @Test
@@ -101,9 +137,7 @@ public class CircularInputStreamTest {
             contentToCycle[i] = value == IOUtils.EOF ? 0 : value;
             value++;
         }
-
         final byte[] expectedOutput = Arrays.copyOf(contentToCycle, size);
-
         assertStreamOutput(contentToCycle, expectedOutput);
     }
 

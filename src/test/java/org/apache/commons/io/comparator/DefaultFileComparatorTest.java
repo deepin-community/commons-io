@@ -21,9 +21,9 @@ import java.io.File;
 import org.junit.jupiter.api.BeforeEach;
 
 /**
- * Test case for {@link DefaultFileComparator}.
+ * Tests {@link DefaultFileComparator}.
  */
-public class DefaultFileComparatorTest extends ComparatorAbstractTestCase {
+public class DefaultFileComparatorTest extends ComparatorAbstractTest {
 
     @BeforeEach
     public void setUp() {

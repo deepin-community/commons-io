@@ -17,28 +17,40 @@
 package org.apache.commons.io.input;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
-import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.RandomUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests functionality of {@link BufferedFileChannelInputStream}.
- *
+ * Tests {@link InputStream} subclasses.
+ * <p>
  * This class was ported and adapted from Apache Spark commit 933dc6cb7b3de1d8ccaf73d124d6eb95b947ed19 where it was
  * called {@code GenericFileInputStreamSuite}.
+ * </p>
  */
 public abstract class AbstractInputStreamTest {
 
+    static final String ARRAY_LENGTHS_NAME = "org.apache.commons.io.input.AbstractInputStreamTest#getArrayLengths";
+
+    static final int[] ARRAY_LENGTHS = { 0, 1, 2, 4, 8, 16, 32, 64, 128 };
+
+    static int[] getArrayLengths() {
+        return ARRAY_LENGTHS;
+    }
+
     private byte[] randomBytes;
 
-    protected File inputFile;
+    protected Path inputFile;
 
     protected InputStream[] inputStreams;
 
@@ -46,16 +58,44 @@ public abstract class AbstractInputStreamTest {
     public void setUp() throws IOException {
         // Create a byte array of size 2 MB with random bytes
         randomBytes = RandomUtils.nextBytes(2 * 1024 * 1024);
-        inputFile = File.createTempFile("temp-file", ".tmp");
-        FileUtils.writeByteArrayToFile(inputFile, randomBytes);
+        inputFile = Files.createTempFile("temp-file", ".tmp");
+        Files.write(inputFile, randomBytes);
     }
 
     @AfterEach
     public void tearDown() throws IOException {
-        inputFile.delete();
+        Files.delete(inputFile);
+        IOUtils.close(inputStreams);
+    }
 
-        for (final InputStream is : inputStreams) {
-            is.close();
+    @Test
+    public void testAvailableAfterClose() throws Exception {
+        for (final InputStream inputStream : inputStreams) {
+            inputStream.close();
+            assertEquals(0, inputStream.available());
+        }
+    }
+
+    @Test
+    public void testAvailableAfterOpen() throws Exception {
+        for (final InputStream inputStream : inputStreams) {
+            assertEquals(0, inputStream.available());
+        }
+    }
+
+    @Test
+    public void testAvailableAfterRead() throws Exception {
+        for (final InputStream inputStream : inputStreams) {
+            assertNotEquals(IOUtils.EOF, inputStream.read());
+            assertTrue(inputStream.available() > 0);
+        }
+    }
+
+    @Test
+    public void testAvailableAtEnd() throws Exception {
+        for (final InputStream inputStream : inputStreams) {
+            IOUtils.consume(inputStream);
+            assertEquals(0, inputStream.available());
         }
     }
 
@@ -135,9 +175,8 @@ public abstract class AbstractInputStreamTest {
     public void testReadPastEOF() throws IOException {
         final InputStream is = inputStreams[0];
         final byte[] buf = new byte[1024];
-        int read;
-        while ((read = is.read(buf, 0, buf.length)) != -1) {
-
+        while (is.read(buf, 0, buf.length) != -1) {
+            // empty
         }
 
         final int readAfterEOF = is.read(buf, 0, buf.length);

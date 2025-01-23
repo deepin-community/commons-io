@@ -27,12 +27,6 @@ import java.nio.ByteOrder;
 public final class ByteOrderParser {
 
     /**
-     * ByteOrderUtils is a static utility class, so prevent construction with a private constructor.
-     */
-    private ByteOrderParser() {
-    }
-
-    /**
      * Parses the String argument as a {@link ByteOrder}.
      * <p>
      * Returns {@code ByteOrder.LITTLE_ENDIAN} if the given value is {@code "LITTLE_ENDIAN"}.
@@ -47,10 +41,10 @@ public final class ByteOrderParser {
      * </ul>
      *
      * @param value
-     *            the {@code String} containing the ByteOrder representation to be parsed
+     *            the {@link String} containing the ByteOrder representation to be parsed
      * @return the ByteOrder represented by the string argument
      * @throws IllegalArgumentException
-     *             if the {@code String} containing the ByteOrder representation to be parsed is unknown.
+     *             if the {@link String} containing the ByteOrder representation to be parsed is unknown.
      */
     public static ByteOrder parseByteOrder(final String value) {
         if (ByteOrder.BIG_ENDIAN.toString().equals(value)) {
@@ -61,6 +55,12 @@ public final class ByteOrderParser {
         }
         throw new IllegalArgumentException("Unsupported byte order setting: " + value + ", expected one of " + ByteOrder.LITTLE_ENDIAN +
                  ", " + ByteOrder.BIG_ENDIAN);
+    }
+
+    /**
+     * ByteOrderUtils is a static utility class, so prevent construction with a private constructor.
+     */
+    private ByteOrderParser() {
     }
 
 }

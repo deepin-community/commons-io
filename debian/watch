@@ -1,2 +1,2 @@
-version=3
-http://www.apache.org/dist/commons/io/source/commons-io-(.*)-src\.tar\.gz
+version=4
+https://www.apache.org/dist/commons/io/source/commons-io-(.*)-src\.tar\.gz

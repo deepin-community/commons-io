@@ -27,12 +27,40 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests {@link ThresholdingOutputStream}.
+ */
 public class ThresholdingOutputStreamTest {
 
     @Test
-    public void testSetByteCount() throws Exception {
-        final AtomicBoolean reached = new AtomicBoolean(false);
-        try (final ThresholdingOutputStream tos = new ThresholdingOutputStream(3) {
+    public void testSetByteCount_OutputStream() throws Exception {
+        final AtomicBoolean reached = new AtomicBoolean();
+        try (ThresholdingOutputStream tos = new ThresholdingOutputStream(3) {
+            {
+                setByteCount(2);
+            }
+
+            @Override
+            protected OutputStream getOutputStream() throws IOException {
+                return new ByteArrayOutputStream(4);
+            }
+
+            @Override
+            protected void thresholdReached() throws IOException {
+                reached.set(true);
+            }
+        }) {
+            tos.write('a');
+            assertFalse(reached.get());
+            tos.write('a');
+            assertTrue(reached.get());
+        }
+    }
+
+    @Test
+    public void testSetByteCount_Stream() throws Exception {
+        final AtomicBoolean reached = new AtomicBoolean();
+        try (ThresholdingOutputStream tos = new ThresholdingOutputStream(3) {
             {
                 setByteCount(2);
             }
@@ -59,7 +87,7 @@ public class ThresholdingOutputStreamTest {
         final AtomicBoolean reached = new AtomicBoolean();
         // Null threshold consumer
         reached.set(false);
-        try (final ThresholdingOutputStream tos = new ThresholdingOutputStream(1, null,
+        try (ThresholdingOutputStream tos = new ThresholdingOutputStream(1, null,
             os -> new ByteArrayOutputStream(4))) {
             tos.write('a');
             assertFalse(reached.get());
@@ -68,7 +96,7 @@ public class ThresholdingOutputStreamTest {
         }
         // Null output stream function
         reached.set(false);
-        try (final ThresholdingOutputStream tos = new ThresholdingOutputStream(1, os -> reached.set(true), null)) {
+        try (ThresholdingOutputStream tos = new ThresholdingOutputStream(1, os -> reached.set(true), null)) {
             tos.write('a');
             assertFalse(reached.get());
             tos.write('a');
@@ -76,7 +104,7 @@ public class ThresholdingOutputStreamTest {
         }
         // non-null inputs.
         reached.set(false);
-        try (final ThresholdingOutputStream tos = new ThresholdingOutputStream(1, os -> reached.set(true),
+        try (ThresholdingOutputStream tos = new ThresholdingOutputStream(1, os -> reached.set(true),
             os -> new ByteArrayOutputStream(4))) {
             tos.write('a');
             assertFalse(reached.get());
@@ -87,7 +115,7 @@ public class ThresholdingOutputStreamTest {
 
     @Test
     public void testThresholdIOConsumerIOException() throws Exception {
-        try (final ThresholdingOutputStream tos = new ThresholdingOutputStream(1, os -> {
+        try (ThresholdingOutputStream tos = new ThresholdingOutputStream(1, os -> {
             throw new IOException("Threshold reached.");
         }, os -> new ByteArrayOutputStream(4))) {
             tos.write('a');
@@ -97,11 +125,68 @@ public class ThresholdingOutputStreamTest {
 
     @Test
     public void testThresholdIOConsumerUncheckedException() throws Exception {
-        try (final ThresholdingOutputStream tos = new ThresholdingOutputStream(1, os -> {
+        try (ThresholdingOutputStream tos = new ThresholdingOutputStream(1, os -> {
             throw new IllegalStateException("Threshold reached.");
         }, os -> new ByteArrayOutputStream(4))) {
             tos.write('a');
             assertThrows(IllegalStateException.class, () -> tos.write('a'));
+        }
+    }
+
+    /**
+     * Tests the case where the threshold is negative.
+     * The threshold is not reached until something is written to the stream.
+     */
+    @Test
+    public void testThresholdLessThanZero() throws IOException {
+        final AtomicBoolean reached = new AtomicBoolean();
+        try (final ThresholdingOutputStream out = new ThresholdingOutputStream(-1) {
+            @Override
+            protected void thresholdReached() throws IOException {
+                reached.set(true);
+            }
+        }) {
+            assertFalse(reached.get());
+            out.write(89);
+            assertTrue(reached.get());
+            assertTrue(out.isThresholdExceeded());
+        }
+    }
+
+    @Test
+    public void testThresholdZero() throws IOException {
+        final AtomicBoolean reached = new AtomicBoolean();
+        try (final ThresholdingOutputStream out = new ThresholdingOutputStream(0) {
+            @Override
+            protected void thresholdReached() throws IOException {
+                reached.set(true);
+            }
+        }) {
+            assertFalse(out.isThresholdExceeded());
+            out.write(89);
+            assertTrue(reached.get());
+            assertTrue(out.isThresholdExceeded());
+        }
+    }
+
+    /**
+     * Tests the case where no bytes are written.
+     * The threshold is not reached until something is written to the stream.
+     */
+    @Test
+    public void testThresholdZeroWrite() throws IOException {
+        final AtomicBoolean reached = new AtomicBoolean();
+        try (final ThresholdingOutputStream out = new ThresholdingOutputStream(7) {
+            @Override
+            protected void thresholdReached() throws IOException {
+                reached.set(true);
+            }
+        }) {
+            assertFalse(out.isThresholdExceeded());
+            assertFalse(reached.get());
+            out.write(new byte[0]);
+            assertFalse(out.isThresholdExceeded());
+            assertFalse(reached.get());
         }
     }
 }

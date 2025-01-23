@@ -16,8 +16,7 @@
  */
 package org.apache.commons.io.output;
 
-import org.apache.commons.io.input.QueueInputStream;
-
+import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
@@ -26,8 +25,10 @@ import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.apache.commons.io.input.QueueInputStream;
+
 /**
- * Simple alternative to JDK {@link java.io.PipedOutputStream}; queue input stream provides what's written in queue
+ * Simple alternative to JDK {@link PipedOutputStream}; queue input stream provides what's written in queue
  * output stream.
  * <p>
  * Example usage:
@@ -45,8 +46,8 @@ import java.util.concurrent.LinkedBlockingQueue;
  * single thread or multiple threads. Also, unlike JDK classes, no special meaning is attached to initial or current
  * thread. Instances can be used longer after initial threads exited.
  * <p>
- * Closing a {@code QueueOutputStream} has no effect. The methods in this class can be called after the stream has been
- * closed without generating an {@code IOException}.
+ * Closing a {@link QueueOutputStream} has no effect. The methods in this class can be called after the stream has been
+ * closed without generating an {@link IOException}.
  * </p>
  *
  * @see QueueInputStream
@@ -73,13 +74,13 @@ public class QueueOutputStream extends OutputStream {
     }
 
     /**
-     * Creates a new QueueInputStream instance connected to this. Writes to this output stream will be visible to the
+     * Constructs a new QueueInputStream instance connected to this. Writes to this output stream will be visible to the
      * input stream.
      *
      * @return QueueInputStream connected to this stream
      */
     public QueueInputStream newQueueInputStream() {
-        return new QueueInputStream(blockingQueue);
+        return QueueInputStream.builder().setBlockingQueue(blockingQueue).get();
     }
 
     /**

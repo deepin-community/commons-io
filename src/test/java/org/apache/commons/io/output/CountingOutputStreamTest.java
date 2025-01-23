@@ -17,7 +17,7 @@
 package org.apache.commons.io.output;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,14 +27,20 @@ import org.apache.commons.io.input.NullInputStream;
 import org.junit.jupiter.api.Test;
 
 /**
- *
+ * Tests {@link CountingOutputStream}.
  */
 public class CountingOutputStreamTest {
+
+    private void assertByteArrayEquals(final String msg, final byte[] array, final int start, final int end) {
+        for (int i = start; i < end; i++) {
+            assertEquals(array[i], i-start, msg+": array[" + i + "] mismatch");
+        }
+    }
 
     @Test
     public void testCounting() throws IOException {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try (final CountingOutputStream cos = new CountingOutputStream(baos)) {
+        try (CountingOutputStream cos = new CountingOutputStream(baos)) {
 
             for (int i = 0; i < 20; i++) {
                 cos.write(i);
@@ -76,35 +82,19 @@ public class CountingOutputStreamTest {
         final long size = (long) Integer.MAX_VALUE + (long) 1;
 
         final NullInputStream mock = new NullInputStream(size);
-        final CountingOutputStream cos = new CountingOutputStream(NullOutputStream.NULL_OUTPUT_STREAM);
+        final CountingOutputStream cos = new CountingOutputStream(NullOutputStream.INSTANCE);
 
         // Test integer methods
         IOUtils.copyLarge(mock, cos);
-        try {
-            cos.getCount();
-            fail("Expected getCount() to throw an ArithmeticException");
-        } catch (final ArithmeticException ae) {
-            // expected result
-        }
-        try {
-            cos.resetCount();
-            fail("Expected resetCount() to throw an ArithmeticException");
-        } catch (final ArithmeticException ae) {
-            // expected result
-        }
+        assertThrows(ArithmeticException.class, () -> cos.getCount());
+        assertThrows(ArithmeticException.class, () -> cos.resetCount());
 
-        mock.close();
+        mock.init();
 
         // Test long methods
         IOUtils.copyLarge(mock, cos);
         assertEquals(size, cos.getByteCount(), "getByteCount()");
         assertEquals(size, cos.resetByteCount(), "resetByteCount()");
-    }
-
-    private void assertByteArrayEquals(final String msg, final byte[] array, final int start, final int end) {
-        for (int i = start; i < end; i++) {
-            assertEquals(array[i], i-start, msg+": array[" + i + "] mismatch");
-        }
     }
 
 }

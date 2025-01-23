@@ -1,9 +1,9 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: Apache Commons IO
-Source: http://svn.apache.org/repos/asf/commons/proper/io/
+Source: https://commons.apache.org/io/download_io.cgi
 
 Files: *
-Copyright: 2002-2021, The Apache Software Foundation
+Copyright: 2002-2024, The Apache Software Foundation
 License: Apache-2.0
 
 Files: debian/*
@@ -15,7 +15,7 @@ Copyright: 2005, Trygve Laugstøl
            2009, Ludovic Claude
            2010, Torsten Werner
            2011, Jakub Adam
-           2013-2016, Emmanuel Bourg
+           2013-2024, Emmanuel Bourg
 License: Apache-2.0
 
 License: Apache-2.0

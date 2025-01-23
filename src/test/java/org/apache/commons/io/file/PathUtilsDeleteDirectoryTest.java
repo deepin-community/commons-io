@@ -18,34 +18,32 @@
 package org.apache.commons.io.file;
 
 import static org.apache.commons.io.file.CounterAssertions.assertCounts;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
  * Tests {@link DeletingPathVisitor}.
  */
-public class PathUtilsDeleteDirectoryTest {
+public class PathUtilsDeleteDirectoryTest extends AbstractTempDirTest {
 
-    private Path tempDir;
-
-    @AfterEach
-    public void afterEach() throws IOException {
-        // backstop
-        if (Files.exists(tempDir) && PathUtils.isEmptyDirectory(tempDir)) {
-            Files.deleteIfExists(tempDir);
-        }
-    }
-
-    @BeforeEach
-    public void beforeEach() throws IOException {
-        tempDir = Files.createTempDirectory(getClass().getCanonicalName());
+    @Test
+    public void testDeleteAbsentDirectory() throws IOException {
+        final Path absent = tempDirPath.resolve("ThisDirectoryDoesNotExist");
+        assertFalse(Files.exists(absent));
+        final Class<NoSuchFileException> expectedType = NoSuchFileException.class;
+        assertThrows(expectedType, () -> PathUtils.deleteDirectory(absent));
+        assertThrows(expectedType, () -> PathUtils.deleteDirectory(absent, StandardDeleteOption.OVERRIDE_READ_ONLY));
+        assertThrows(expectedType, () -> PathUtils.deleteDirectory(absent, PathUtils.EMPTY_DELETE_OPTION_ARRAY));
+        // This will throw if not empty.
+        Files.deleteIfExists(tempDirPath);
     }
 
     /**
@@ -53,10 +51,10 @@ public class PathUtilsDeleteDirectoryTest {
      */
     @Test
     public void testDeleteDirectory1FileSize0() throws IOException {
-        PathUtils.copyDirectory(Paths.get("src/test/resources/org/apache/commons/io/dirs-1-file-size-0"), tempDir);
-        assertCounts(1, 1, 0, PathUtils.deleteDirectory(tempDir));
+        PathUtils.copyDirectory(Paths.get("src/test/resources/org/apache/commons/io/dirs-1-file-size-0"), tempDirPath);
+        assertCounts(1, 1, 0, PathUtils.deleteDirectory(tempDirPath));
         // This will throw if not empty.
-        Files.deleteIfExists(tempDir);
+        Files.deleteIfExists(tempDirPath);
     }
 
     /**
@@ -64,10 +62,10 @@ public class PathUtilsDeleteDirectoryTest {
      */
     private void testDeleteDirectory1FileSize0(final DeleteOption... options) throws IOException {
         // TODO Setup the test to use FileVisitOption.
-        PathUtils.copyDirectory(Paths.get("src/test/resources/org/apache/commons/io/dirs-1-file-size-0"), tempDir);
-        assertCounts(1, 1, 0, PathUtils.deleteDirectory(tempDir, options));
+        PathUtils.copyDirectory(Paths.get("src/test/resources/org/apache/commons/io/dirs-1-file-size-0"), tempDirPath);
+        assertCounts(1, 1, 0, PathUtils.deleteDirectory(tempDirPath, options));
         // This will throw if not empty.
-        Files.deleteIfExists(tempDir);
+        Files.deleteIfExists(tempDirPath);
     }
 
     @Test
@@ -85,10 +83,10 @@ public class PathUtilsDeleteDirectoryTest {
      */
     @Test
     public void testDeleteDirectory1FileSize1() throws IOException {
-        PathUtils.copyDirectory(Paths.get("src/test/resources/org/apache/commons/io/dirs-1-file-size-1"), tempDir);
-        assertCounts(1, 1, 1, PathUtils.deleteDirectory(tempDir));
+        PathUtils.copyDirectory(Paths.get("src/test/resources/org/apache/commons/io/dirs-1-file-size-1"), tempDirPath);
+        assertCounts(1, 1, 1, PathUtils.deleteDirectory(tempDirPath));
         // This will throw if not empty.
-        Files.deleteIfExists(tempDir);
+        Files.deleteIfExists(tempDirPath);
     }
 
     /**
@@ -96,10 +94,10 @@ public class PathUtilsDeleteDirectoryTest {
      */
     @Test
     public void testDeleteDirectory2FileSize2() throws IOException {
-        PathUtils.copyDirectory(Paths.get("src/test/resources/org/apache/commons/io/dirs-2-file-size-2"), tempDir);
-        assertCounts(3, 2, 2, PathUtils.deleteDirectory(tempDir));
+        PathUtils.copyDirectory(Paths.get("src/test/resources/org/apache/commons/io/dirs-2-file-size-2"), tempDirPath);
+        assertCounts(3, 2, 2, PathUtils.deleteDirectory(tempDirPath));
         // This will throw if not empty.
-        Files.deleteIfExists(tempDir);
+        Files.deleteIfExists(tempDirPath);
     }
 
     /**
@@ -107,8 +105,8 @@ public class PathUtilsDeleteDirectoryTest {
      */
     @Test
     public void testDeleteEmptyDirectory() throws IOException {
-        assertCounts(1, 0, 0, PathUtils.deleteDirectory(tempDir));
+        assertCounts(1, 0, 0, PathUtils.deleteDirectory(tempDirPath));
         // This will throw if not empty.
-        Files.deleteIfExists(tempDir);
+        Files.deleteIfExists(tempDirPath);
     }
 }

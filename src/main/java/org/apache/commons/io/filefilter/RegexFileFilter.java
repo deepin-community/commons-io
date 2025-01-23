@@ -21,10 +21,12 @@ import java.io.Serializable;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOCase;
+import org.apache.commons.io.file.PathUtils;
 
 /**
  * Filters files using supplied regular expression(s).
@@ -36,7 +38,7 @@ import org.apache.commons.io.IOCase;
  * e.g.
  *
  * <pre>
- * File dir = new File(".");
+ * File dir = FileUtils.current();
  * FileFilter fileFilter = new RegexFileFilter("^.*[tT]est(-\\d+)?\\.java$");
  * File[] files = dir.listFiles(fileFilter);
  * for (String file : files) {
@@ -47,7 +49,7 @@ import org.apache.commons.io.IOCase;
  * <h2>Using NIO</h2>
  *
  * <pre>
- * final Path dir = Paths.get("");
+ * final Path dir = PathUtils.current();
  * final AccumulatorPathVisitor visitor = AccumulatorPathVisitor.withLongCounters(new RegexFileFilter("^.*[tT]est(-\\d+)?\\.java$"));
  * //
  * // Walk one dir
@@ -63,6 +65,10 @@ import org.apache.commons.io.IOCase;
  * System.out.println(visitor.getDirList());
  * System.out.println(visitor.getFileList());
  * </pre>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.4
  */
@@ -78,36 +84,35 @@ public class RegexFileFilter extends AbstractFileFilter implements Serializable 
      * @return a new Pattern.
      */
     private static Pattern compile(final String pattern, final int flags) {
-        if (pattern == null) {
-            throw new IllegalArgumentException("Pattern is missing");
-        }
+        Objects.requireNonNull(pattern, "pattern");
         return Pattern.compile(pattern, flags);
     }
 
     /**
      * Converts IOCase to Pattern compilation flags.
      *
-     * @param caseSensitivity case-sensitivity.
+     * @param ioCase case-sensitivity.
      * @return Pattern compilation flags.
      */
-    private static int toFlags(final IOCase caseSensitivity) {
-        return IOCase.isCaseSensitive(caseSensitivity) ? Pattern.CASE_INSENSITIVE : 0;
+    private static int toFlags(final IOCase ioCase) {
+        return IOCase.isCaseSensitive(ioCase) ? 0 : Pattern.CASE_INSENSITIVE;
     }
 
     /** The regular expression pattern that will be used to match file names. */
     private final Pattern pattern;
-    
+
     /** How convert a path to a string. */
-    private final Function<Path, String> pathToString;
+    private transient final Function<Path, String> pathToString;
 
     /**
      * Constructs a new regular expression filter for a compiled regular expression
      *
      * @param pattern regular expression to match.
-     * @throws IllegalArgumentException if the pattern is null.
+     * @throws NullPointerException if the pattern is null.
      */
+    @SuppressWarnings("unchecked")
     public RegexFileFilter(final Pattern pattern) {
-        this(pattern, p -> p.getFileName().toString());
+        this(pattern, (Function<Path, String> & Serializable) PathUtils::getFileNameString);
     }
 
     /**
@@ -115,22 +120,20 @@ public class RegexFileFilter extends AbstractFileFilter implements Serializable 
      *
      * @param pattern regular expression to match.
      * @param pathToString How convert a path to a string.
-     * @throws IllegalArgumentException if the pattern is null.
+     * @throws NullPointerException if the pattern is null.
      * @since 2.10.0
      */
     public RegexFileFilter(final Pattern pattern, final Function<Path, String> pathToString) {
-        if (pattern == null) {
-            throw new IllegalArgumentException("Pattern is missing");
-        }
+        Objects.requireNonNull(pattern, "pattern");
         this.pattern = pattern;
-        this.pathToString = pathToString;
+        this.pathToString = pathToString != null ? pathToString : Objects::toString;
     }
 
     /**
      * Constructs a new regular expression filter.
      *
      * @param pattern regular string expression to match
-     * @throws IllegalArgumentException if the pattern is null
+     * @throws NullPointerException if the pattern is null
      */
     public RegexFileFilter(final String pattern) {
         this(pattern, 0);
@@ -151,11 +154,11 @@ public class RegexFileFilter extends AbstractFileFilter implements Serializable 
      * Constructs a new regular expression filter with the specified flags case sensitivity.
      *
      * @param pattern regular string expression to match
-     * @param caseSensitivity how to handle case sensitivity, null means case-sensitive
+     * @param ioCase how to handle case sensitivity, null means case-sensitive
      * @throws IllegalArgumentException if the pattern is null
      */
-    public RegexFileFilter(final String pattern, final IOCase caseSensitivity) {
-        this(compile(pattern, toFlags(caseSensitivity)));
+    public RegexFileFilter(final String pattern, final IOCase ioCase) {
+        this(compile(pattern, toFlags(ioCase)));
     }
 
     /**
@@ -179,7 +182,8 @@ public class RegexFileFilter extends AbstractFileFilter implements Serializable 
      */
     @Override
     public FileVisitResult accept(final Path path, final BasicFileAttributes attributes) {
-        return toFileVisitResult(pattern.matcher(pathToString.apply(path)).matches(), path);
+        final String result = pathToString.apply(path);
+        return toFileVisitResult(result != null && pattern.matcher(result).matches());
     }
 
     /**

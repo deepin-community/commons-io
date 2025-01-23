@@ -16,40 +16,61 @@
  */
 package org.apache.commons.io.output;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
 
 /**
- * JUnit Test Case for {@link ClosedOutputStream}.
+ * Tests {@link ClosedOutputStream}.
  */
 public class ClosedOutputStreamTest {
-
-    /**
-     * Test the {@code write(b)} method.
-     */
-    @Test
-    public void testWrite() {
-        try (ClosedOutputStream cos = new ClosedOutputStream()) {
-            cos.write('x');
-            fail("write(b)");
-        } catch (final IOException e) {
-            // expected
-        }
-    }
 
     /**
      * Test the {@code flush()} method.
      */
     @Test
-    public void testFlush() {
+    public void testFlush() throws IOException {
         try (ClosedOutputStream cos = new ClosedOutputStream()) {
-            cos.flush();
-            fail("flush()");
-        } catch (final IOException e) {
-            // expected
+            assertThrows(IOException.class, cos::flush);
+        }
+    }
+
+    @Test
+    public void testSingleton() throws IOException {
+        try (@SuppressWarnings("deprecation")
+        ClosedOutputStream cos = ClosedOutputStream.CLOSED_OUTPUT_STREAM) {
+            assertThrows(IOException.class, cos::flush);
+        }
+        try (ClosedOutputStream cos = ClosedOutputStream.INSTANCE) {
+            assertThrows(IOException.class, cos::flush);
+        }
+    }
+
+    /**
+     * Test the {@code write(b)} method.
+     */
+    @Test
+    public void testWrite() throws IOException {
+        try (ClosedOutputStream cos = new ClosedOutputStream()) {
+            assertThrows(IOException.class, () -> cos.write('x'));
+        }
+    }
+
+    @Test
+    public void testWriteArray() throws IOException {
+        try (ClosedOutputStream cos = new ClosedOutputStream()) {
+            assertThrows(IOException.class, () -> cos.write(new byte[0]));
+            assertThrows(IOException.class, () -> cos.write(new byte[10]));
+        }
+    }
+
+    @Test
+    public void testWriteArrayIndex() throws IOException {
+        try (ClosedOutputStream cos = new ClosedOutputStream()) {
+            assertThrows(IOException.class, () -> cos.write(new byte[0], 0, 0));
+            assertThrows(IOException.class, () -> cos.write(new byte[10], 0, 1));
         }
     }
 

@@ -18,13 +18,14 @@ package org.apache.commons.io.output;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.function.Supplier;
+
+import org.apache.commons.io.function.Erase;
 
 /**
- * Broken output stream. This stream always throws an {@link IOException} from
- * all {@link OutputStream} methods.
+ * Always throws an exception from all {@link OutputStream} methods where {@link IOException} is declared.
  * <p>
- * This class is mostly useful for testing error handling in code that uses an
- * output stream.
+ * This class is mostly useful for testing error handling.
  * </p>
  *
  * @since 2.0
@@ -32,55 +33,93 @@ import java.io.OutputStream;
 public class BrokenOutputStream extends OutputStream {
 
     /**
-     * The exception that is thrown by all methods of this class.
-     */
-    private final IOException exception;
-
-    /**
-     * Creates a new stream that always throws the given exception.
+     * The singleton instance using a default IOException.
      *
-     * @param exception the exception to be thrown
+     * @since 2.12.0
      */
-    public BrokenOutputStream(final IOException exception) {
-        this.exception = exception;
-    }
+    public static final BrokenOutputStream INSTANCE = new BrokenOutputStream();
 
     /**
-     * Creates a new stream that always throws an {@link IOException}
+     * Supplies the exception that is thrown by all methods of this class.
+     */
+    private final Supplier<Throwable> exceptionSupplier;
+
+    /**
+     * Constructs a new stream that always throws an {@link IOException}.
      */
     public BrokenOutputStream() {
-        this(new IOException("Broken output stream"));
+        this(() -> new IOException("Broken output stream"));
     }
 
     /**
-     * Throws the configured exception.
+     * Constructs a new stream that always throws the given exception.
      *
-     * @param b ignored
-     * @throws IOException always thrown
+     * @param exception the exception to be thrown.
+     * @deprecated Use {@link #BrokenOutputStream(Throwable)}.
      */
-    @Override
-    public void write(final int b) throws IOException {
-        throw exception;
+    @Deprecated
+    public BrokenOutputStream(final IOException exception) {
+        this(() -> exception);
     }
 
     /**
-     * Throws the configured exception.
+     * Constructs a new stream that always throws the supplied exception.
      *
-     * @throws IOException always thrown
+     * @param exceptionSupplier a supplier for the IOException or RuntimeException to be thrown.
+     * @since 2.12.0
      */
-    @Override
-    public void flush() throws IOException {
-        throw exception;
+    public BrokenOutputStream(final Supplier<Throwable> exceptionSupplier) {
+        this.exceptionSupplier = exceptionSupplier;
+    }
+
+    /**
+     * Constructs a new stream that always throws the given exception.
+     *
+     * @param exception the exception to be thrown.
+     * @since 2.16.0
+     */
+    public BrokenOutputStream(final Throwable exception) {
+        this(() -> exception);
     }
 
     /**
      * Throws the configured exception.
      *
-     * @throws IOException always thrown
+     * @throws IOException always throws the exception configured in a constructor.
      */
     @Override
     public void close() throws IOException {
-        throw exception;
+        throw rethrow();
+    }
+
+    /**
+     * Throws the configured exception.
+     *
+     * @throws IOException always throws the exception configured in a constructor.
+     */
+    @Override
+    public void flush() throws IOException {
+        throw rethrow();
+    }
+
+    /**
+     * Throws the configured exception from its supplier.
+     *
+     * @return Throws the configured exception from its supplier.
+     */
+    private RuntimeException rethrow() {
+        return Erase.rethrow(exceptionSupplier.get());
+    }
+
+    /**
+     * Throws the configured exception.
+     *
+     * @param b ignored.
+     * @throws IOException always throws the exception configured in a constructor.
+     */
+    @Override
+    public void write(final int b) throws IOException {
+        throw rethrow();
     }
 
 }

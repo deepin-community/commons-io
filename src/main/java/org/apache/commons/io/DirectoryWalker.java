@@ -40,8 +40,8 @@ import org.apache.commons.io.filefilter.TrueFileFilter;
  * The following sections describe:
  * </p>
  * <ul>
- * <li><a href="#example">1. Example Implementation</a> - example {@code FileCleaner} implementation.</li>
- * <li><a href="#filter">2. Filter Example</a> - using {@link FileFilter}(s) with {@code DirectoryWalker}.</li>
+ * <li><a href="#example">1. Example Implementation</a> - example {@link FileCleaner} implementation.</li>
+ * <li><a href="#filter">2. Filter Example</a> - using {@link FileFilter}(s) with {@link DirectoryWalker}.</li>
  * <li><a href="#cancel">3. Cancellation</a> - how to implement cancellation behavior.</li>
  * </ul>
  *
@@ -123,7 +123,7 @@ import org.apache.commons.io.filefilter.TrueFileFilter;
  * </pre>
  * <p>
  * The third constructor option is to specify separate filters, one for directories and one for files. These are
- * combined internally to form the correct {@code FileFilter}, something which is very easy to get wrong when
+ * combined internally to form the correct {@link FileFilter}, something which is very easy to get wrong when
  * attempted manually, particularly when trying to express constructs like 'any file in directories named docs'.
  * </p>
  * <p>
@@ -154,10 +154,10 @@ import org.apache.commons.io.filefilter.TrueFileFilter;
  * implementation.
  * </p>
  * <p>
- * What {@code DirectoryWalker} does provide for cancellation is:
+ * What {@link DirectoryWalker} does provide for cancellation is:
  * </p>
  * <ul>
- * <li>{@link CancelException} which can be thrown in any of the <i>lifecycle</i> methods to stop processing.</li>
+ * <li>{@link CancelException} which can be thrown in any of the <em>lifecycle</em> methods to stop processing.</li>
  * <li>The {@code walk()} method traps thrown {@link CancelException} and calls the {@code handleCancelled()}
  * method, providing a place for custom cancel processing.</li>
  * </ul>
@@ -186,11 +186,11 @@ import org.apache.commons.io.filefilter.TrueFileFilter;
  *
  * <p>
  * This example provides a public {@code cancel()} method that can be called by another thread to stop the
- * processing. A typical example use-case would be a cancel button on a GUI. Calling this method sets a
- * <a href="http://java.sun.com/docs/books/jls/second_edition/html/classes.doc.html#36930"> volatile</a> flag to ensure
- * it will work properly in a multi-threaded environment. The flag is returned by the {@code handleIsCancelled()}
- * method, which will cause the walk to stop immediately. The {@code handleCancelled()} method will be the next,
- * and last, callback method received once cancellation has occurred.
+ * processing. A typical example use-case is a cancel button on a GUI. Calling this method sets a
+ * <a href='https://docs.oracle.com/javase/specs/jls/se8/html/jls-8.html#d5e12277'>(@code volatile}</a>
+ * flag to ensure it works properly in a multi-threaded environment.
+ * The flag is returned by the {@code handleIsCancelled()} method, which causes the walk to stop
+ * immediately. The {@code handleCancelled()} method will be the next, and last, callback method received once cancellation has occurred.
  * </p>
  *
  * <pre>
@@ -216,7 +216,7 @@ import org.apache.commons.io.filefilter.TrueFileFilter;
  *
  * <p>
  * This shows an example of how internal cancellation processing could be implemented. <b>Note</b> the decision logic
- * and throwing a {@link CancelException} could be implemented in any of the <i>lifecycle</i> methods.
+ * and throwing a {@link CancelException} could be implemented in any of the <em>lifecycle</em> methods.
  * </p>
  *
  * <pre>
@@ -255,23 +255,82 @@ import org.apache.commons.io.filefilter.TrueFileFilter;
 public abstract class DirectoryWalker<T> {
 
     /**
+     * CancelException is thrown in DirectoryWalker to cancel the current
+     * processing.
+     */
+    public static class CancelException extends IOException {
+
+        /** Serialization id. */
+        private static final long serialVersionUID = 1347339620135041008L;
+
+        /** The file being processed when the exception was thrown. */
+        private final File file;
+        /** The file depth when the exception was thrown. */
+        private final int depth;
+
+        /**
+         * Constructs a {@link CancelException} with
+         * the file and depth when cancellation occurred.
+         *
+         * @param file  the file when the operation was cancelled, may be null
+         * @param depth  the depth when the operation was cancelled, may be null
+         */
+        public CancelException(final File file, final int depth) {
+            this("Operation Cancelled", file, depth);
+        }
+
+        /**
+         * Constructs a {@link CancelException} with
+         * an appropriate message and the file and depth when
+         * cancellation occurred.
+         *
+         * @param message  the detail message
+         * @param file  the file when the operation was cancelled
+         * @param depth  the depth when the operation was cancelled
+         */
+        public CancelException(final String message, final File file, final int depth) {
+            super(message);
+            this.file = file;
+            this.depth = depth;
+        }
+
+        /**
+         * Returns the depth when the operation was cancelled.
+         *
+         * @return the depth when the operation was cancelled
+         */
+        public int getDepth() {
+            return depth;
+        }
+
+        /**
+         * Returns the file when the operation was cancelled.
+         *
+         * @return the file when the operation was cancelled
+         */
+        public File getFile() {
+            return file;
+        }
+    }
+    /**
      * The file filter to use to filter files and directories.
      */
     private final FileFilter filter;
+
     /**
      * The limit on the directory depth to walk.
      */
     private final int depthLimit;
 
     /**
-     * Construct an instance with no filtering and unlimited <i>depth</i>.
+     * Constructs an instance with no filtering and unlimited <em>depth</em>.
      */
     protected DirectoryWalker() {
         this(null, -1);
     }
 
     /**
-     * Constructs an instance with a filter and limit the <i>depth</i> navigated to.
+     * Constructs an instance with a filter and limit the <em>depth</em> navigated to.
      * <p>
      * The filter controls which files and directories will be navigated to as
      * part of the walk. The {@link FileFilterUtils} class is useful for combining
@@ -280,7 +339,7 @@ public abstract class DirectoryWalker<T> {
      * </p>
      *
      * @param filter  the filter to apply, null means visit all files
-     * @param depthLimit  controls how <i>deep</i> the hierarchy is
+     * @param depthLimit  controls how <em>deep</em> the hierarchy is
      *  navigated to (less than 0 means unlimited)
      */
     protected DirectoryWalker(final FileFilter filter, final int depthLimit) {
@@ -290,7 +349,7 @@ public abstract class DirectoryWalker<T> {
 
     /**
      * Constructs an instance with a directory and a file filter and an optional
-     * limit on the <i>depth</i> navigated to.
+     * limit on the <em>depth</em> navigated to.
      * <p>
      * The filters control which files and directories will be navigated to as part
      * of the walk. This constructor uses {@link FileFilterUtils#makeDirectoryOnly(IOFileFilter)}
@@ -300,7 +359,7 @@ public abstract class DirectoryWalker<T> {
      *
      * @param directoryFilter  the filter to apply to directories, null means visit all directories
      * @param fileFilter  the filter to apply to files, null means visit all files
-     * @param depthLimit  controls how <i>deep</i> the hierarchy is
+     * @param depthLimit  controls how <em>deep</em> the hierarchy is
      *  navigated to (less than 0 means unlimited)
      */
     protected DirectoryWalker(IOFileFilter directoryFilter, IOFileFilter fileFilter, final int depthLimit) {
@@ -317,72 +376,8 @@ public abstract class DirectoryWalker<T> {
     }
 
     /**
-     * Internal method that walks the directory hierarchy in a depth-first manner.
-     * <p>
-     * Users of this class do not need to call this method. This method will
-     * be called automatically by another (public) method on the specific subclass.
-     * </p>
-     * <p>
-     * Writers of subclasses should call this method to start the directory walk.
-     * Once called, this method will emit events as it walks the hierarchy.
-     * The event methods have the prefix {@code handle}.
-     * </p>
-     *
-     * @param startDirectory  the directory to start from, not null
-     * @param results  the collection of result objects, may be updated
-     * @throws NullPointerException if the start directory is null
-     * @throws IOException if an I/O Error occurs
-     */
-    protected final void walk(final File startDirectory, final Collection<T> results) throws IOException {
-        Objects.requireNonNull(startDirectory, "startDirectory");
-        try {
-            handleStart(startDirectory, results);
-            walk(startDirectory, 0, results);
-            handleEnd(results);
-        } catch(final CancelException cancel) {
-            handleCancelled(startDirectory, results, cancel);
-        }
-    }
-
-    /**
-     * Main recursive method to examine the directory hierarchy.
-     *
-     * @param directory  the directory to examine, not null
-     * @param depth  the directory level (starting directory = 0)
-     * @param results  the collection of result objects, may be updated
-     * @throws IOException if an I/O Error occurs
-     */
-    private void walk(final File directory, final int depth, final Collection<T> results) throws IOException {
-        checkIfCancelled(directory, depth, results);
-        if (handleDirectory(directory, depth, results)) {
-            handleDirectoryStart(directory, depth, results);
-            final int childDepth = depth + 1;
-            if (depthLimit < 0 || childDepth <= depthLimit) {
-                checkIfCancelled(directory, depth, results);
-                File[] childFiles = filter == null ? directory.listFiles() : directory.listFiles(filter);
-                childFiles = filterDirectoryContents(directory, depth, childFiles);
-                if (childFiles == null) {
-                    handleRestricted(directory, childDepth, results);
-                } else {
-                    for (final File childFile : childFiles) {
-                        if (childFile.isDirectory()) {
-                            walk(childFile, childDepth, results);
-                        } else {
-                            checkIfCancelled(childFile, childDepth, results);
-                            handleFile(childFile, childDepth, results);
-                            checkIfCancelled(childFile, childDepth, results);
-                        }
-                    }
-                }
-            }
-            handleDirectoryEnd(directory, depth, results);
-        }
-        checkIfCancelled(directory, depth, results);
-    }
-
-    /**
      * Checks whether the walk has been cancelled by calling {@link #handleIsCancelled},
-     * throwing a {@code CancelException} if it has.
+     * throwing a {@link CancelException} if it has.
      * <p>
      * Writers of subclasses should not normally call this method as it is called
      * automatically by the walk of the tree. However, sometimes a single method,
@@ -400,6 +395,133 @@ public abstract class DirectoryWalker<T> {
         if (handleIsCancelled(file, depth, results)) {
             throw new CancelException(file, depth);
         }
+    }
+
+    /**
+     * Overridable callback method invoked with the contents of each directory.
+     * <p>
+     * This implementation returns the files unchanged
+     * </p>
+     *
+     * @param directory  the current directory being processed
+     * @param depth  the current directory level (starting directory = 0)
+     * @param files the files (possibly filtered) in the directory, may be {@code null}
+     * @return the filtered list of files
+     * @throws IOException if an I/O Error occurs
+     * @since 2.0
+     */
+    @SuppressWarnings("unused") // Possibly thrown from subclasses.
+    protected File[] filterDirectoryContents(final File directory, final int depth, final File... files) throws
+            IOException {
+        return files;
+    }
+
+    /**
+     * Overridable callback method invoked when the operation is cancelled.
+     * The file being processed when the cancellation occurred can be
+     * obtained from the exception.
+     * <p>
+     * This implementation just re-throws the {@link CancelException}.
+     * </p>
+     *
+     * @param startDirectory  the directory that the walk started from
+     * @param results  the collection of result objects, may be updated
+     * @param cancel  the exception throw to cancel further processing
+     * containing details at the point of cancellation.
+     * @throws IOException if an I/O Error occurs
+     */
+    protected void handleCancelled(final File startDirectory, final Collection<T> results,
+                       final CancelException cancel) throws IOException {
+        // re-throw exception - overridable by subclass
+        throw cancel;
+    }
+
+    /**
+     * Overridable callback method invoked to determine if a directory should be processed.
+     * <p>
+     * This method returns a boolean to indicate if the directory should be examined or not.
+     * If you return false, the entire directory and any subdirectories will be skipped.
+     * Note that this functionality is in addition to the filtering by file filter.
+     * </p>
+     * <p>
+     * This implementation does nothing and returns true.
+     * </p>
+     *
+     * @param directory  the current directory being processed
+     * @param depth  the current directory level (starting directory = 0)
+     * @param results  the collection of result objects, may be updated
+     * @return true to process this directory, false to skip this directory
+     * @throws IOException if an I/O Error occurs
+     */
+    @SuppressWarnings("unused") // Possibly thrown from subclasses.
+    protected boolean handleDirectory(final File directory, final int depth, final Collection<T> results) throws
+            IOException {
+        // do nothing - overridable by subclass
+        return true;  // process directory
+    }
+
+    /**
+     * Overridable callback method invoked at the end of processing each directory.
+     * <p>
+     * This implementation does nothing.
+     * </p>
+     *
+     * @param directory  the directory being processed
+     * @param depth  the current directory level (starting directory = 0)
+     * @param results  the collection of result objects, may be updated
+     * @throws IOException if an I/O Error occurs
+     */
+    @SuppressWarnings("unused") // Possibly thrown from subclasses.
+    protected void handleDirectoryEnd(final File directory, final int depth, final Collection<T> results) throws
+            IOException {
+        // do nothing - overridable by subclass
+    }
+
+    /**
+     * Overridable callback method invoked at the start of processing each directory.
+     * <p>
+     * This implementation does nothing.
+     * </p>
+     *
+     * @param directory  the current directory being processed
+     * @param depth  the current directory level (starting directory = 0)
+     * @param results  the collection of result objects, may be updated
+     * @throws IOException if an I/O Error occurs
+     */
+    @SuppressWarnings("unused") // Possibly thrown from subclasses.
+    protected void handleDirectoryStart(final File directory, final int depth, final Collection<T> results) throws
+            IOException {
+        // do nothing - overridable by subclass
+    }
+
+    /**
+     * Overridable callback method invoked at the end of processing.
+     * <p>
+     * This implementation does nothing.
+     * </p>
+     *
+     * @param results  the collection of result objects, may be updated
+     * @throws IOException if an I/O Error occurs
+     */
+    @SuppressWarnings("unused") // Possibly thrown from subclasses.
+    protected void handleEnd(final Collection<T> results) throws IOException {
+        // do nothing - overridable by subclass
+    }
+
+    /**
+     * Overridable callback method invoked for each (non-directory) file.
+     * <p>
+     * This implementation does nothing.
+     * </p>
+     *
+     * @param file  the current file being processed
+     * @param depth  the current directory level (starting directory = 0)
+     * @param results  the collection of result objects, may be updated
+     * @throws IOException if an I/O Error occurs
+     */
+    @SuppressWarnings("unused") // Possibly thrown from subclasses.
+    protected void handleFile(final File file, final int depth, final Collection<T> results) throws IOException {
+        // do nothing - overridable by subclass
     }
 
     /**
@@ -448,23 +570,20 @@ public abstract class DirectoryWalker<T> {
     }
 
     /**
-     * Overridable callback method invoked when the operation is cancelled.
-     * The file being processed when the cancellation occurred can be
-     * obtained from the exception.
+     * Overridable callback method invoked for each restricted directory.
      * <p>
-     * This implementation just re-throws the {@link CancelException}.
+     * This implementation does nothing.
      * </p>
      *
-     * @param startDirectory  the directory that the walk started from
+     * @param directory  the restricted directory
+     * @param depth  the current directory level (starting directory = 0)
      * @param results  the collection of result objects, may be updated
-     * @param cancel  the exception throw to cancel further processing
-     * containing details at the point of cancellation.
      * @throws IOException if an I/O Error occurs
      */
-    protected void handleCancelled(final File startDirectory, final Collection<T> results,
-                       final CancelException cancel) throws IOException {
-        // re-throw exception - overridable by subclass
-        throw cancel;
+    @SuppressWarnings("unused") // Possibly thrown from subclasses.
+    protected void handleRestricted(final File directory, final int depth, final Collection<T> results) throws
+            IOException {
+        // do nothing - overridable by subclass
     }
 
     /**
@@ -483,185 +602,66 @@ public abstract class DirectoryWalker<T> {
     }
 
     /**
-     * Overridable callback method invoked to determine if a directory should be processed.
+     * Internal method that walks the directory hierarchy in a depth-first manner.
      * <p>
-     * This method returns a boolean to indicate if the directory should be examined or not.
-     * If you return false, the entire directory and any subdirectories will be skipped.
-     * Note that this functionality is in addition to the filtering by file filter.
+     * Users of this class do not need to call this method. This method will
+     * be called automatically by another (public) method on the specific subclass.
      * </p>
      * <p>
-     * This implementation does nothing and returns true.
+     * Writers of subclasses should call this method to start the directory walk.
+     * Once called, this method will emit events as it walks the hierarchy.
+     * The event methods have the prefix {@code handle}.
      * </p>
      *
-     * @param directory  the current directory being processed
-     * @param depth  the current directory level (starting directory = 0)
+     * @param startDirectory  the directory to start from, not null
      * @param results  the collection of result objects, may be updated
-     * @return true to process this directory, false to skip this directory
+     * @throws NullPointerException if the start directory is null
      * @throws IOException if an I/O Error occurs
      */
-    @SuppressWarnings("unused") // Possibly thrown from subclasses.
-    protected boolean handleDirectory(final File directory, final int depth, final Collection<T> results) throws
-            IOException {
-        // do nothing - overridable by subclass
-        return true;  // process directory
-    }
-
-    /**
-     * Overridable callback method invoked at the start of processing each directory.
-     * <p>
-     * This implementation does nothing.
-     * </p>
-     *
-     * @param directory  the current directory being processed
-     * @param depth  the current directory level (starting directory = 0)
-     * @param results  the collection of result objects, may be updated
-     * @throws IOException if an I/O Error occurs
-     */
-    @SuppressWarnings("unused") // Possibly thrown from subclasses.
-    protected void handleDirectoryStart(final File directory, final int depth, final Collection<T> results) throws
-            IOException {
-        // do nothing - overridable by subclass
-    }
-
-    /**
-     * Overridable callback method invoked with the contents of each directory.
-     * <p>
-     * This implementation returns the files unchanged
-     * </p>
-     *
-     * @param directory  the current directory being processed
-     * @param depth  the current directory level (starting directory = 0)
-     * @param files the files (possibly filtered) in the directory, may be {@code null}
-     * @return the filtered list of files
-     * @throws IOException if an I/O Error occurs
-     * @since 2.0
-     */
-    @SuppressWarnings("unused") // Possibly thrown from subclasses.
-    protected File[] filterDirectoryContents(final File directory, final int depth, final File... files) throws
-            IOException {
-        return files;
-    }
-
-    /**
-     * Overridable callback method invoked for each (non-directory) file.
-     * <p>
-     * This implementation does nothing.
-     * </p>
-     *
-     * @param file  the current file being processed
-     * @param depth  the current directory level (starting directory = 0)
-     * @param results  the collection of result objects, may be updated
-     * @throws IOException if an I/O Error occurs
-     */
-    @SuppressWarnings("unused") // Possibly thrown from subclasses.
-    protected void handleFile(final File file, final int depth, final Collection<T> results) throws IOException {
-        // do nothing - overridable by subclass
-    }
-
-    /**
-     * Overridable callback method invoked for each restricted directory.
-     * <p>
-     * This implementation does nothing.
-     * </p>
-     *
-     * @param directory  the restricted directory
-     * @param depth  the current directory level (starting directory = 0)
-     * @param results  the collection of result objects, may be updated
-     * @throws IOException if an I/O Error occurs
-     */
-    @SuppressWarnings("unused") // Possibly thrown from subclasses.
-    protected void handleRestricted(final File directory, final int depth, final Collection<T> results) throws
-            IOException {
-        // do nothing - overridable by subclass
-    }
-
-    /**
-     * Overridable callback method invoked at the end of processing each directory.
-     * <p>
-     * This implementation does nothing.
-     * </p>
-     *
-     * @param directory  the directory being processed
-     * @param depth  the current directory level (starting directory = 0)
-     * @param results  the collection of result objects, may be updated
-     * @throws IOException if an I/O Error occurs
-     */
-    @SuppressWarnings("unused") // Possibly thrown from subclasses.
-    protected void handleDirectoryEnd(final File directory, final int depth, final Collection<T> results) throws
-            IOException {
-        // do nothing - overridable by subclass
-    }
-
-    /**
-     * Overridable callback method invoked at the end of processing.
-     * <p>
-     * This implementation does nothing.
-     * </p>
-     *
-     * @param results  the collection of result objects, may be updated
-     * @throws IOException if an I/O Error occurs
-     */
-    @SuppressWarnings("unused") // Possibly thrown from subclasses.
-    protected void handleEnd(final Collection<T> results) throws IOException {
-        // do nothing - overridable by subclass
-    }
-
-    /**
-     * CancelException is thrown in DirectoryWalker to cancel the current
-     * processing.
-     */
-    public static class CancelException extends IOException {
-
-        /** Serialization id. */
-        private static final long serialVersionUID = 1347339620135041008L;
-
-        /** The file being processed when the exception was thrown. */
-        private final File file;
-        /** The file depth when the exception was thrown. */
-        private final int depth;
-
-        /**
-         * Constructs a {@code CancelException} with
-         * the file and depth when cancellation occurred.
-         *
-         * @param file  the file when the operation was cancelled, may be null
-         * @param depth  the depth when the operation was cancelled, may be null
-         */
-        public CancelException(final File file, final int depth) {
-            this("Operation Cancelled", file, depth);
+    protected final void walk(final File startDirectory, final Collection<T> results) throws IOException {
+        Objects.requireNonNull(startDirectory, "startDirectory");
+        try {
+            handleStart(startDirectory, results);
+            walk(startDirectory, 0, results);
+            handleEnd(results);
+        } catch (final CancelException cancel) {
+            handleCancelled(startDirectory, results, cancel);
         }
+    }
 
-        /**
-         * Constructs a {@code CancelException} with
-         * an appropriate message and the file and depth when
-         * cancellation occurred.
-         *
-         * @param message  the detail message
-         * @param file  the file when the operation was cancelled
-         * @param depth  the depth when the operation was cancelled
-         */
-        public CancelException(final String message, final File file, final int depth) {
-            super(message);
-            this.file = file;
-            this.depth = depth;
+    /**
+     * Main recursive method to examine the directory hierarchy.
+     *
+     * @param directory  the directory to examine, not null
+     * @param depth  the directory level (starting directory = 0)
+     * @param results  the collection of result objects, may be updated
+     * @throws IOException if an I/O Error occurs
+     */
+    private void walk(final File directory, final int depth, final Collection<T> results) throws IOException {
+        checkIfCancelled(directory, depth, results);
+        if (handleDirectory(directory, depth, results)) {
+            handleDirectoryStart(directory, depth, results);
+            final int childDepth = depth + 1;
+            if (depthLimit < 0 || childDepth <= depthLimit) {
+                checkIfCancelled(directory, depth, results);
+                File[] childFiles = filter == null ? directory.listFiles() : directory.listFiles(filter);
+                childFiles = filterDirectoryContents(directory, depth, childFiles);
+                if (childFiles == null) {
+                    handleRestricted(directory, childDepth, results);
+                } else {
+                    for (final File childFile : childFiles) {
+                        if (childFile.isDirectory()) {
+                            walk(childFile, childDepth, results);
+                        } else {
+                            checkIfCancelled(childFile, childDepth, results);
+                            handleFile(childFile, childDepth, results);
+                            checkIfCancelled(childFile, childDepth, results);
+                        }
+                    }
+                }
+            }
+            handleDirectoryEnd(directory, depth, results);
         }
-
-        /**
-         * Returns the file when the operation was cancelled.
-         *
-         * @return the file when the operation was cancelled
-         */
-        public File getFile() {
-            return file;
-        }
-
-        /**
-         * Returns the depth when the operation was cancelled.
-         *
-         * @return the depth when the operation was cancelled
-         */
-        public int getDepth() {
-            return depth;
-        }
+        checkIfCancelled(directory, depth, results);
     }
 }

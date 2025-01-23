@@ -70,12 +70,23 @@ public class TaggedWriter extends ProxyWriter {
     private final Serializable tag = UUID.randomUUID();
 
     /**
-     * Creates a tagging decorator for the given writer.
+     * Constructs a tagging decorator for the given writer.
      *
      * @param proxy writer to be decorated
      */
     public TaggedWriter(final Writer proxy) {
         super(proxy);
+    }
+
+    /**
+     * Tags any IOExceptions thrown, wrapping and re-throwing.
+     *
+     * @param e The IOException thrown
+     * @throws IOException if an I/O error occurs.
+     */
+    @Override
+    protected void handleIOException(final IOException e) throws IOException {
+        throw new TaggedIOException(e, tag);
     }
 
     /**
@@ -101,17 +112,6 @@ public class TaggedWriter extends ProxyWriter {
      */
     public void throwIfCauseOf(final Exception exception) throws IOException {
         TaggedIOException.throwCauseIfTaggedWith(exception, tag);
-    }
-
-    /**
-     * Tags any IOExceptions thrown, wrapping and re-throwing.
-     *
-     * @param e The IOException thrown
-     * @throws IOException if an I/O error occurs.
-     */
-    @Override
-    protected void handleIOException(final IOException e) throws IOException {
-        throw new TaggedIOException(e, tag);
     }
 
 }

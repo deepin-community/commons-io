@@ -36,7 +36,7 @@ import org.apache.commons.io.file.Counters.PathCounters;
 public class CleaningPathVisitor extends CountingPathVisitor {
 
     /**
-     * Creates a new instance configured with a BigInteger {@link PathCounters}.
+     * Constructs a new instance configured with a BigInteger {@link PathCounters}.
      *
      * @return a new instance configured with a BigInteger {@link PathCounters}.
      */
@@ -45,7 +45,7 @@ public class CleaningPathVisitor extends CountingPathVisitor {
     }
 
     /**
-     * Creates a new instance configured with a long {@link PathCounters}.
+     * Constructs a new instance configured with a long {@link PathCounters}.
      *
      * @return a new instance configured with a long {@link PathCounters}.
      */
@@ -64,8 +64,7 @@ public class CleaningPathVisitor extends CountingPathVisitor {
      * @param skip The files to skip deleting.
      * @since 2.8.0
      */
-    public CleaningPathVisitor(final PathCounters pathCounter, final DeleteOption[] deleteOption,
-        final String... skip) {
+    public CleaningPathVisitor(final PathCounters pathCounter, final DeleteOption[] deleteOption, final String... skip) {
         super(pathCounter);
         final String[] temp = skip != null ? skip.clone() : EMPTY_STRING_ARRAY;
         Arrays.sort(temp);
@@ -90,7 +89,7 @@ public class CleaningPathVisitor extends CountingPathVisitor {
      * @return true to process the given path, false if not.
      */
     private boolean accept(final Path path) {
-        return Arrays.binarySearch(skip, Objects.toString(path.getFileName(), null)) < 0;
+        return Arrays.binarySearch(skip, PathUtils.getFileNameString(path)) < 0;
     }
 
     @Override

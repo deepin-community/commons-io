@@ -19,10 +19,10 @@
 package org.apache.commons.io.serialization;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -31,6 +31,11 @@ import org.junit.jupiter.api.BeforeEach;
  */
 public abstract class AbstractCloseableListTest {
     private final List<Closeable> closeableList = new ArrayList<>();
+
+    @AfterEach
+    public void cleanup() {
+        IOUtils.closeQuietly(closeableList);
+    }
 
     /**
      * Adds a Closeable to close after each test.
@@ -47,16 +52,5 @@ public abstract class AbstractCloseableListTest {
     @BeforeEach
     public void setup() {
         closeableList.clear();
-    }
-
-    @AfterEach
-    public void cleanup() {
-        for (final Closeable c : closeableList) {
-            try {
-                c.close();
-            } catch (final IOException ignored) {
-                // ignore
-            }
-        }
     }
 }

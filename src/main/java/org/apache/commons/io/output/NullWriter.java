@@ -19,21 +19,34 @@ package org.apache.commons.io.output;
 import java.io.Writer;
 
 /**
- * Writes all data to the famous <b>/dev/null</b>.
+ * Never writes data. Calls never go beyond this class.
  * <p>
- * This {@code Writer} has no destination (file/socket etc.) and all characters written to it are ignored and lost.
+ * This {@link Writer} has no destination (file/socket etc.) and all characters written to it are ignored and lost.
  * </p>
  */
 public class NullWriter extends Writer {
 
     /**
-     * A singleton.
+     * The singleton instance.
+     *
+     * @since 2.12.0
      */
-    public static final NullWriter NULL_WRITER = new NullWriter();
+    public static final NullWriter INSTANCE = new NullWriter();
+
+    /**
+     * The singleton instance.
+     *
+     * @deprecated Use {@link #INSTANCE}.
+     */
+    @Deprecated
+    public static final NullWriter NULL_WRITER = INSTANCE;
 
     /**
      * Constructs a new NullWriter.
+     *
+     * @deprecated Use {@link #INSTANCE}.
      */
+    @Deprecated
     public NullWriter() {
     }
 
@@ -52,20 +65,6 @@ public class NullWriter extends Writer {
     /**
      * Does nothing - output to {@code /dev/null}.
      * @param csq The character sequence to write
-     * @param start The index of the first character to write
-     * @param end  The index of the first character to write (exclusive)
-     * @return this writer
-     * @since 2.0
-     */
-    @Override
-    public Writer append(final CharSequence csq, final int start, final int end) {
-        //to /dev/null
-        return this;
-    }
-
-    /**
-     * Does nothing - output to {@code /dev/null}.
-     * @param csq The character sequence to write
      * @return this writer
      * @since 2.0
      */
@@ -77,10 +76,27 @@ public class NullWriter extends Writer {
 
     /**
      * Does nothing - output to {@code /dev/null}.
-     * @param idx The character to write
+     * @param csq The character sequence to write
+     * @param start The index of the first character to write
+     * @param end  The index of the first character to write (exclusive)
+     * @return this writer
+     * @since 2.0
      */
     @Override
-    public void write(final int idx) {
+    public Writer append(final CharSequence csq, final int start, final int end) {
+        //to /dev/null
+        return this;
+    }
+
+    /** @see java.io.Writer#close() */
+    @Override
+    public void close() {
+        //to /dev/null
+    }
+
+    /** @see java.io.Writer#flush() */
+    @Override
+    public void flush() {
         //to /dev/null
     }
 
@@ -106,6 +122,15 @@ public class NullWriter extends Writer {
 
     /**
      * Does nothing - output to {@code /dev/null}.
+     * @param idx The character to write
+     */
+    @Override
+    public void write(final int idx) {
+        //to /dev/null
+    }
+
+    /**
+     * Does nothing - output to {@code /dev/null}.
      * @param str The string to write
      */
     @Override
@@ -121,18 +146,6 @@ public class NullWriter extends Writer {
      */
     @Override
     public void write(final String str, final int st, final int end) {
-        //to /dev/null
-    }
-
-    /** @see java.io.Writer#flush() */
-    @Override
-    public void flush() {
-        //to /dev/null
-    }
-
-    /** @see java.io.Writer#close() */
-    @Override
-    public void close() {
         //to /dev/null
     }
 

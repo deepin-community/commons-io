@@ -22,11 +22,12 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
 /**
- * An Iterator over the lines in a {@code Reader}.
+ * An Iterator over the lines in a {@link Reader}.
  * <p>
- * {@code LineIterator} holds a reference to an open {@code Reader}.
+ * {@link LineIterator} holds a reference to an open {@link Reader}.
  * When you have finished with the iterator you should close the reader
  * to free internal resources. This can be done by closing the reader directly,
  * or by calling the {@link #close()} or {@link #closeQuietly(LineIterator)}
@@ -34,7 +35,7 @@ import java.util.NoSuchElementException;
  * <p>
  * The recommended usage pattern is:
  * <pre>
- * LineIterator it = FileUtils.lineIterator(file, "UTF-8");
+ * LineIterator it = FileUtils.lineIterator(file, StandardCharsets.UTF_8.name());
  * try {
  *   while (it.hasNext()) {
  *     String line = it.nextLine();
@@ -51,23 +52,37 @@ public class LineIterator implements Iterator<String>, Closeable {
 
     // N.B. This class deliberately does not implement Iterable, see https://issues.apache.org/jira/browse/IO-181
 
+    /**
+     * Closes a {@link LineIterator} quietly.
+     *
+     * @param iterator The iterator to close, or {@code null}.
+     * @deprecated As of 2.6 deprecated without replacement. Please use the try-with-resources statement or handle
+     * suppressed exceptions manually.
+     * @see Throwable#addSuppressed(Throwable)
+     */
+    @Deprecated
+    public static void closeQuietly(final LineIterator iterator) {
+        IOUtils.closeQuietly(iterator);
+    }
+
     /** The reader that is being read. */
     private final BufferedReader bufferedReader;
+
     /** The current line. */
     private String cachedLine;
+
     /** A flag indicating if the iterator has been fully read. */
     private boolean finished;
 
     /**
-     * Constructs an iterator of the lines for a {@code Reader}.
+     * Constructs an iterator of the lines for a {@link Reader}.
      *
-     * @param reader the {@code Reader} to read from, not null
-     * @throws IllegalArgumentException if the reader is null
+     * @param reader the {@link Reader} to read from, not null
+     * @throws NullPointerException if the reader is null
      */
-    public LineIterator(final Reader reader) throws IllegalArgumentException {
-        if (reader == null) {
-            throw new IllegalArgumentException("Reader must not be null");
-        }
+    @SuppressWarnings("resource") // Caller closes Reader
+    public LineIterator(final Reader reader) {
+        Objects.requireNonNull(reader, "reader");
         if (reader instanceof BufferedReader) {
             bufferedReader = (BufferedReader) reader;
         } else {
@@ -76,8 +91,24 @@ public class LineIterator implements Iterator<String>, Closeable {
     }
 
     /**
-     * Indicates whether the {@code Reader} has more lines.
-     * If there is an {@code IOException} then {@link #close()} will
+     * Closes the underlying {@link Reader}.
+     * This method is useful if you only want to process the first few
+     * lines of a larger file. If you do not close the iterator
+     * then the {@link Reader} remains open.
+     * This method can safely be called multiple times.
+     *
+     * @throws IOException if closing the underlying {@link Reader} fails.
+     */
+    @Override
+    public void close() throws IOException {
+        finished = true;
+        cachedLine = null;
+        IOUtils.close(bufferedReader);
+    }
+
+    /**
+     * Indicates whether the {@link Reader} has more lines.
+     * If there is an {@link IOException} then {@link #close()} will
      * be called on this instance.
      *
      * @return {@code true} if the Reader has more lines
@@ -103,7 +134,7 @@ public class LineIterator implements Iterator<String>, Closeable {
                     return true;
                 }
             }
-        } catch(final IOException ioe) {
+        } catch (final IOException ioe) {
             IOUtils.closeQuietly(this, ioe::addSuppressed);
             throw new IllegalStateException(ioe);
         }
@@ -120,7 +151,7 @@ public class LineIterator implements Iterator<String>, Closeable {
     }
 
     /**
-     * Returns the next line in the wrapped {@code Reader}.
+     * Returns the next line in the wrapped {@link Reader}.
      *
      * @return the next line from the input
      * @throws NoSuchElementException if there is no line to return
@@ -131,11 +162,13 @@ public class LineIterator implements Iterator<String>, Closeable {
     }
 
     /**
-     * Returns the next line in the wrapped {@code Reader}.
+     * Returns the next line in the wrapped {@link Reader}.
      *
      * @return the next line from the input
      * @throws NoSuchElementException if there is no line to return
+     * @deprecated Use {@link #next()}.
      */
+    @Deprecated
     public String nextLine() {
         if (!hasNext()) {
             throw new NoSuchElementException("No more lines");
@@ -146,22 +179,6 @@ public class LineIterator implements Iterator<String>, Closeable {
     }
 
     /**
-     * Closes the underlying {@code Reader}.
-     * This method is useful if you only want to process the first few
-     * lines of a larger file. If you do not close the iterator
-     * then the {@code Reader} remains open.
-     * This method can safely be called multiple times.
-     *
-     * @throws IOException if closing the underlying {@code Reader} fails.
-     */
-    @Override
-    public void close() throws IOException {
-        finished = true;
-        cachedLine = null;
-        IOUtils.close(bufferedReader);
-    }
-
-    /**
      * Unsupported.
      *
      * @throws UnsupportedOperationException always
@@ -169,19 +186,6 @@ public class LineIterator implements Iterator<String>, Closeable {
     @Override
     public void remove() {
         throw new UnsupportedOperationException("remove not supported");
-    }
-
-    /**
-     * Closes a {@code LineIterator} quietly.
-     *
-     * @param iterator The iterator to close, or {@code null}.
-     * @deprecated As of 2.6 deprecated without replacement. Please use the try-with-resources statement or handle
-     * suppressed exceptions manually.
-     * @see Throwable#addSuppressed(java.lang.Throwable)
-     */
-    @Deprecated
-    public static void closeQuietly(final LineIterator iterator) {
-        IOUtils.closeQuietly(iterator);
     }
 
 }

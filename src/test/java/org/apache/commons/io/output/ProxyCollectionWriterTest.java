@@ -33,13 +33,13 @@ import org.apache.commons.io.IOIndexedException;
 import org.junit.jupiter.api.Test;
 
 /**
- * JUnit Test Case for {@link ProxyCollectionWriter}.
+ * Tests {@link ProxyCollectionWriter}.
  */
 public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnAppendChar1() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(badW, goodW, null);
@@ -56,7 +56,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnAppendChar2() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(goodW, badW, null);
@@ -73,7 +73,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnAppendCharSequence1() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(badW, goodW, null);
@@ -90,7 +90,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnAppendCharSequence2() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(goodW, badW, null);
@@ -107,7 +107,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnAppendCharSequenceIntInt1() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(badW, goodW, null);
@@ -124,7 +124,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnAppendCharSequenceIntInt2() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(goodW, badW, null);
@@ -141,7 +141,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnClose1() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(badW, goodW, null);
@@ -157,7 +157,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnClose2() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(goodW, badW, null);
@@ -173,7 +173,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnFlush1() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(badW, goodW, null);
@@ -189,7 +189,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnFlush2() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(goodW, badW, null);
@@ -205,7 +205,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnWriteCharArray1() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(badW, goodW, null);
@@ -222,7 +222,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnWriteCharArray2() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(goodW, badW, null);
@@ -239,7 +239,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnWriteCharArrayIntInt1() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(badW, goodW, null);
@@ -256,7 +256,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnWriteCharArrayIntInt2() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(goodW, badW, null);
@@ -273,7 +273,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnWriteInt1() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(badW, goodW, null);
@@ -290,7 +290,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnWriteInt2() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(goodW, badW, null);
@@ -307,7 +307,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnWriteString1() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(badW, goodW, null);
@@ -324,7 +324,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnWriteString2() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(goodW, badW, null);
@@ -342,7 +342,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnWriteStringIntInt1() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(badW, goodW, null);
@@ -359,7 +359,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testArrayIOExceptionOnWriteStringIntInt2() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(goodW, badW, null);
@@ -377,7 +377,7 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testCollectionCloseBranchIOException() throws IOException {
-        final Writer badW = new BrokenWriter();
+        final Writer badW = BrokenWriter.INSTANCE;
         final StringWriter goodW = mock(StringWriter.class);
         @SuppressWarnings("resource") // not necessary to close this
         final ProxyCollectionWriter tw = new ProxyCollectionWriter(Arrays.asList(goodW, badW, null));
@@ -394,12 +394,12 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testConstructorsNull() throws IOException {
-        try (final ProxyCollectionWriter teeWriter = new ProxyCollectionWriter((Writer[]) null)) {
+        try (ProxyCollectionWriter teeWriter = new ProxyCollectionWriter((Writer[]) null)) {
             // Call any method, should not throw
             teeWriter.append('a');
             teeWriter.flush();
         }
-        try (final ProxyCollectionWriter teeWriter = new ProxyCollectionWriter((Collection<Writer>) null)) {
+        try (ProxyCollectionWriter teeWriter = new ProxyCollectionWriter((Collection<Writer>) null)) {
             // Call any method, should not throw
             teeWriter.append('a');
             teeWriter.flush();
@@ -409,11 +409,10 @@ public class ProxyCollectionWriterTest {
 
     @Test
     public void testTee() throws IOException {
-        final StringBuilderWriter sbw1 = new StringBuilderWriter();
-        final StringBuilderWriter sbw2 = new StringBuilderWriter();
-        final StringBuilderWriter expected = new StringBuilderWriter();
-
-        try (final ProxyCollectionWriter tw = new ProxyCollectionWriter(sbw1, sbw2, null)) {
+        try (StringBuilderWriter sbw1 = new StringBuilderWriter();
+                StringBuilderWriter sbw2 = new StringBuilderWriter();
+                StringBuilderWriter expected = new StringBuilderWriter();
+                ProxyCollectionWriter tw = new ProxyCollectionWriter(sbw1, sbw2, null)) {
             for (int i = 0; i < 20; i++) {
                 tw.write(i);
                 expected.write(i);

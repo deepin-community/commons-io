@@ -16,11 +16,12 @@
  */
 package org.apache.commons.io.input;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * This is an alternative to {@link java.io.ByteArrayInputStream}
+ * This is an alternative to {@link ByteArrayInputStream}
  * which removes the synchronization overhead for non-concurrent
  * access; as such this class is not thread-safe.
  *
@@ -28,7 +29,7 @@ import java.io.InputStream;
  * <p>
  * This class is typically used in cases where an input stream that supports
  * marking needs to be passed to a component that wants to explicitly mark
- * the stream, but it it is not desirable to allow marking of the stream.
+ * the stream, but it is not desirable to allow marking of the stream.
  * </p>
  *
  * @since 2.8.0
@@ -36,7 +37,7 @@ import java.io.InputStream;
 public class MarkShieldInputStream extends ProxyInputStream {
 
     /**
-     * Creates a proxy that shields the given input stream from being
+     * Constructs a proxy that shields the given input stream from being
      * marked or rest.
      *
      * @param in underlying input stream
@@ -47,7 +48,7 @@ public class MarkShieldInputStream extends ProxyInputStream {
 
     @SuppressWarnings("sync-override")
     @Override
-    public void mark(final int readlimit) {
+    public void mark(final int readLimit) {
         // no-op
     }
 

@@ -28,7 +28,7 @@ import java.io.Reader;
  * when this limit is reached, regardless of state of underlying reader.
  *
  * <p>
- * One use case is to avoid overrunning the readAheadLimit supplied to {@link java.io.Reader#mark(int)}, since reading
+ * One use case is to avoid overrunning the readAheadLimit supplied to {@link Reader#mark(int)}, since reading
  * too many characters removes the ability to do a successful reset.
  * </p>
  *
@@ -70,18 +70,6 @@ public class BoundedReader extends Reader {
     }
 
     /**
-     * Resets the target to the latest mark,
-     *
-     * @throws IOException If an I/O error occurs while calling the underlying reader's reset method
-     * @see java.io.Reader#reset()
-     */
-    @Override
-    public void reset() throws IOException {
-        charsRead = markedAt;
-        target.reset();
-    }
-
-    /**
      * marks the target stream
      *
      * @param readAheadLimit The number of characters that can be read while still retaining the ability to do #reset().
@@ -114,7 +102,7 @@ public class BoundedReader extends Reader {
             return EOF;
         }
 
-        if (markedAt >= 0 && (charsRead - markedAt) >= readAheadLimit) {
+        if (markedAt >= 0 && charsRead - markedAt >= readAheadLimit) {
             return EOF;
         }
         charsRead++;
@@ -142,5 +130,17 @@ public class BoundedReader extends Reader {
             cbuf[off + i] = (char) c;
         }
         return len;
+    }
+
+    /**
+     * Resets the target to the latest mark,
+     *
+     * @throws IOException If an I/O error occurs while calling the underlying reader's reset method
+     * @see java.io.Reader#reset()
+     */
+    @Override
+    public void reset() throws IOException {
+        charsRead = markedAt;
+        target.reset();
     }
 }

@@ -25,14 +25,15 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.test.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test case for {@link SizeFileComparator}.
+ * Tests {@link SizeFileComparator}.
  */
-public class SizeFileComparatorTest extends ComparatorAbstractTestCase {
+public class SizeFileComparatorTest extends ComparatorAbstractTest {
 
     private File smallerDir;
     private File largerDir;
@@ -54,7 +55,7 @@ public class SizeFileComparatorTest extends ComparatorAbstractTestCase {
             throw new IOException("Cannot create file " + smallerFile
                     + " as the parent directory does not exist");
         }
-        try (final BufferedOutputStream output2 =
+        try (BufferedOutputStream output2 =
                 new BufferedOutputStream(Files.newOutputStream(smallerFile.toPath()))) {
             TestUtils.generateTestData(output2, 32);
         }
@@ -62,7 +63,7 @@ public class SizeFileComparatorTest extends ComparatorAbstractTestCase {
             throw new IOException("Cannot create file " + equalFile
                     + " as the parent directory does not exist");
         }
-        try (final BufferedOutputStream output1 =
+        try (BufferedOutputStream output1 =
                 new BufferedOutputStream(Files.newOutputStream(equalFile.toPath()))) {
             TestUtils.generateTestData(output1, 48);
         }
@@ -70,7 +71,7 @@ public class SizeFileComparatorTest extends ComparatorAbstractTestCase {
             throw new IOException("Cannot create file " + largerFile
                     + " as the parent directory does not exist");
         }
-        try (final BufferedOutputStream output =
+        try (BufferedOutputStream output =
                 new BufferedOutputStream(Files.newOutputStream(largerFile.toPath()))) {
             TestUtils.generateTestData(output, 64);
         }
@@ -84,19 +85,19 @@ public class SizeFileComparatorTest extends ComparatorAbstractTestCase {
      * Test a file which doesn't exist.
      */
     @Test
-    public void testNonexistantFile() {
-        final File nonexistantFile = new File(new File("."), "nonexistant.txt");
-        assertFalse(nonexistantFile.exists());
-        assertTrue(comparator.compare(nonexistantFile, moreFile) < 0, "less");
+    public void testCompareDirectorySizes() {
+        assertEquals(0, comparator.compare(smallerDir, largerDir), "sumDirectoryContents=false");
+        assertEquals(-1, SizeFileComparator.SIZE_SUMDIR_COMPARATOR.compare(smallerDir, largerDir), "less");
+        assertEquals(1, SizeFileComparator.SIZE_SUMDIR_REVERSE.compare(smallerDir, largerDir), "less");
     }
 
     /**
      * Test a file which doesn't exist.
      */
     @Test
-    public void testCompareDirectorySizes() {
-        assertEquals(0, comparator.compare(smallerDir, largerDir), "sumDirectoryContents=false");
-        assertEquals(-1, SizeFileComparator.SIZE_SUMDIR_COMPARATOR.compare(smallerDir, largerDir), "less");
-        assertEquals(1, SizeFileComparator.SIZE_SUMDIR_REVERSE.compare(smallerDir, largerDir), "less");
+    public void testNonExistentFile() {
+        final File nonExistentFile = new File(FileUtils.current(), "non-existent.txt");
+        assertFalse(nonExistentFile.exists());
+        assertTrue(comparator.compare(nonExistentFile, moreFile) < 0, "less");
     }
 }

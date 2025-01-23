@@ -24,41 +24,44 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 
 /**
- * This filter accepts {@code File}s that can be written to.
+ * This filter accepts {@link File}s that can be written to.
  * <p>
- * Example, showing how to print out a list of the current directory's <i>writable</i> files:
+ * Example, showing how to print out a list of the current directory's <em>writable</em> files:
  * </p>
  * <h2>Using Classic IO</h2>
  * <pre>
- * File dir = new File(".");
+ * File dir = FileUtils.current();
  * String[] files = dir.list(CanWriteFileFilter.CAN_WRITE);
  * for (String file : files) {
  *     System.out.println(file);
  * }
  * </pre>
- *
  * <p>
- * Example, showing how to print out a list of the current directory's <i>un-writable</i> files:
- *
+ * Example, showing how to print out a list of the current directory's <em>un-writable</em> files:
+ * </p>
  * <pre>
- * File dir = new File(".");
+ * File dir = FileUtils.current();
  * String[] files = dir.list(CanWriteFileFilter.CANNOT_WRITE);
  * for (String file : files) {
  *     System.out.println(file);
  * }
  * </pre>
- *
  * <p>
  * <b>N.B.</b> For read-only files, use {@code CanReadFileFilter.READ_ONLY}.
+ * </p>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.3
  */
 public class CanWriteFileFilter extends AbstractFileFilter implements Serializable {
 
-    /** Singleton instance of <i>writable</i> filter */
+    /** Singleton instance of <em>writable</em> filter */
     public static final IOFileFilter CAN_WRITE = new CanWriteFileFilter();
 
-    /** Singleton instance of not <i>writable</i> filter */
+    /** Singleton instance of not <em>writable</em> filter */
     public static final IOFileFilter CANNOT_WRITE = CAN_WRITE.negate();
 
     private static final long serialVersionUID = 5132005214688990379L;
@@ -77,7 +80,7 @@ public class CanWriteFileFilter extends AbstractFileFilter implements Serializab
      */
     @Override
     public boolean accept(final File file) {
-        return file.canWrite();
+        return file != null && file.canWrite();
     }
 
     /**
@@ -89,7 +92,7 @@ public class CanWriteFileFilter extends AbstractFileFilter implements Serializab
      */
     @Override
     public FileVisitResult accept(final Path file, final BasicFileAttributes attributes) {
-        return toFileVisitResult(Files.isWritable(file), file);
+        return toFileVisitResult(file != null && Files.isWritable(file));
     }
 
 }

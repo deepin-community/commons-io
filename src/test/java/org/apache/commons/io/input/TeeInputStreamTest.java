@@ -17,7 +17,7 @@
 package org.apache.commons.io.input;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.test.ThrowOnCloseInputStream;
 import org.apache.commons.io.test.ThrowOnCloseOutputStream;
@@ -35,11 +36,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * JUnit Test Case for {@link TeeInputStream}.
+ * Tests {@link TeeInputStream}.
  */
 public class TeeInputStreamTest  {
 
-    private final String ASCII = "US-ASCII";
+    private final String ASCII = StandardCharsets.US_ASCII.name();
 
     private InputStream tee;
 
@@ -50,69 +51,6 @@ public class TeeInputStreamTest  {
         final InputStream input = new ByteArrayInputStream("abc".getBytes(ASCII));
         output = new ByteArrayOutputStream();
         tee = new TeeInputStream(input, output);
-    }
-
-    @Test
-    public void testReadNothing() throws Exception {
-        assertEquals("", new String(output.toString(ASCII)));
-    }
-
-    @Test
-    public void testReadOneByte() throws Exception {
-        assertEquals('a', tee.read());
-        assertEquals("a", new String(output.toString(ASCII)));
-    }
-
-    @Test
-    public void testReadEverything() throws Exception {
-        assertEquals('a', tee.read());
-        assertEquals('b', tee.read());
-        assertEquals('c', tee.read());
-        assertEquals(-1, tee.read());
-        assertEquals("abc", new String(output.toString(ASCII)));
-    }
-
-    @Test
-    public void testReadToArray() throws Exception {
-        final byte[] buffer = new byte[8];
-        assertEquals(3, tee.read(buffer));
-        assertEquals('a', buffer[0]);
-        assertEquals('b', buffer[1]);
-        assertEquals('c', buffer[2]);
-        assertEquals(-1, tee.read(buffer));
-        assertEquals("abc", new String(output.toString(ASCII)));
-    }
-
-    @Test
-    public void testReadToArrayWithOffset() throws Exception {
-        final byte[] buffer = new byte[8];
-        assertEquals(3, tee.read(buffer, 4, 4));
-        assertEquals('a', buffer[4]);
-        assertEquals('b', buffer[5]);
-        assertEquals('c', buffer[6]);
-        assertEquals(-1, tee.read(buffer, 4, 4));
-        assertEquals("abc", new String(output.toString(ASCII)));
-    }
-
-    @Test
-    public void testSkip() throws Exception {
-        assertEquals('a', tee.read());
-        assertEquals(1, tee.skip(1));
-        assertEquals('c', tee.read());
-        assertEquals(-1, tee.read());
-        assertEquals("ac", new String(output.toString(ASCII)));
-    }
-
-    @Test
-    public void testMarkReset() throws Exception {
-        assertEquals('a', tee.read());
-        tee.mark(1);
-        assertEquals('b', tee.read());
-        tee.reset();
-        assertEquals('b', tee.read());
-        assertEquals('c', tee.read());
-        assertEquals(-1, tee.read());
-        assertEquals("abbc", new String(output.toString(ASCII)));
     }
 
     /**
@@ -129,12 +67,17 @@ public class TeeInputStreamTest  {
         verify(goodIs).close();
 
         final TeeInputStream closingTis = new TeeInputStream(goodIs, badOs, true);
-        try {
-            closingTis.close();
-            fail("Expected " + IOException.class.getName());
-        } catch (final IOException e) {
-            verify(goodIs, times(2)).close();
-        }
+        assertThrows(IOException.class, closingTis::close);
+        verify(goodIs, times(2)).close();
+    }
+
+    @SuppressWarnings({ "resource" })
+    @Test
+    public void testCloseHandleIOException() throws IOException {
+        ProxyInputStreamTest
+                .testCloseHandleIOException(new TeeInputStream(new BrokenInputStream((Throwable) new IOException()), new ByteArrayOutputStream(), false));
+        ProxyInputStreamTest
+                .testCloseHandleIOException(new TeeInputStream(new BrokenInputStream((Throwable) new IOException()), new ByteArrayOutputStream(), true));
     }
 
     /**
@@ -147,20 +90,75 @@ public class TeeInputStreamTest  {
         final ByteArrayOutputStream goodOs = mock(ByteArrayOutputStream.class);
 
         final TeeInputStream nonClosingTis = new TeeInputStream(badIs, goodOs, false);
-        try {
-            nonClosingTis.close();
-            fail("Expected " + IOException.class.getName());
-        } catch (final IOException e) {
-            verify(goodOs, never()).close();
-        }
+        assertThrows(IOException.class, nonClosingTis::close);
+        verify(goodOs, never()).close();
 
         final TeeInputStream closingTis = new TeeInputStream(badIs, goodOs, true);
-        try {
-            closingTis.close();
-            fail("Expected " + IOException.class.getName());
-        } catch (final IOException e) {
-            verify(goodOs).close();
-        }
+        assertThrows(IOException.class, closingTis::close);
+        verify(goodOs).close();
+    }
+
+    @Test
+    public void testMarkReset() throws Exception {
+        assertEquals('a', tee.read());
+        tee.mark(1);
+        assertEquals('b', tee.read());
+        tee.reset();
+        assertEquals('b', tee.read());
+        assertEquals('c', tee.read());
+        assertEquals(-1, tee.read());
+        assertEquals("abbc", output.toString(ASCII));
+    }
+
+    @Test
+    public void testReadEverything() throws Exception {
+        assertEquals('a', tee.read());
+        assertEquals('b', tee.read());
+        assertEquals('c', tee.read());
+        assertEquals(-1, tee.read());
+        assertEquals("abc", output.toString(ASCII));
+    }
+
+    @Test
+    public void testReadNothing() throws Exception {
+        assertEquals("", output.toString(ASCII));
+    }
+
+    @Test
+    public void testReadOneByte() throws Exception {
+        assertEquals('a', tee.read());
+        assertEquals("a", output.toString(ASCII));
+    }
+
+    @Test
+    public void testReadToArray() throws Exception {
+        final byte[] buffer = new byte[8];
+        assertEquals(3, tee.read(buffer));
+        assertEquals('a', buffer[0]);
+        assertEquals('b', buffer[1]);
+        assertEquals('c', buffer[2]);
+        assertEquals(-1, tee.read(buffer));
+        assertEquals("abc", output.toString(ASCII));
+    }
+
+    @Test
+    public void testReadToArrayWithOffset() throws Exception {
+        final byte[] buffer = new byte[8];
+        assertEquals(3, tee.read(buffer, 4, 4));
+        assertEquals('a', buffer[4]);
+        assertEquals('b', buffer[5]);
+        assertEquals('c', buffer[6]);
+        assertEquals(-1, tee.read(buffer, 4, 4));
+        assertEquals("abc", output.toString(ASCII));
+    }
+
+    @Test
+    public void testSkip() throws Exception {
+        assertEquals('a', tee.read());
+        assertEquals(1, tee.skip(1));
+        assertEquals('c', tee.read());
+        assertEquals(-1, tee.read());
+        assertEquals("ac", output.toString(ASCII));
     }
 
 }

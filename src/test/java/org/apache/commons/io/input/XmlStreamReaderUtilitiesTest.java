@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
@@ -31,12 +30,18 @@ import org.junit.jupiter.api.Test;
  */
 public class XmlStreamReaderUtilitiesTest {
 
+    /** Mock {@link XmlStreamReader} implementation */
+    private static final class MockXmlStreamReader extends XmlStreamReader {
+        MockXmlStreamReader(final String defaultEncoding) throws IOException {
+            super(CharSequenceInputStream.builder().setCharSequence("").get(), null, true, defaultEncoding);
+        }
+    }
     private static final String RAWMGS1 = "encoding mismatch";
     private static final String RAWMGS2 = "unknown BOM";
-    private static final String HTTPMGS1 = "BOM must be NULL";
+    private static final String HTTPMGS1 = "BOM must be null";
     private static final String HTTPMGS2 = "encoding mismatch";
-    private static final String HTTPMGS3 = "Invalid MIME";
 
+    private static final String HTTPMGS3 = "Illegal MIME";
     private static final String APPXML         = "application/xml";
     private static final String APPXML_UTF8    = "application/xml;charset=UTF-8";
     private static final String APPXML_UTF16   = "application/xml;charset=UTF-16";
@@ -45,43 +50,102 @@ public class XmlStreamReaderUtilitiesTest {
     private static final String APPXML_UTF16LE = "application/xml;charset=UTF-16LE";
     private static final String APPXML_UTF32BE = "application/xml;charset=UTF-32BE";
     private static final String APPXML_UTF32LE = "application/xml;charset=UTF-32LE";
+
     private static final String TXTXML = "text/xml";
 
-    @Test
-    public void testContentTypeEncoding() {
-        checkContentTypeEncoding(null, null);
-        checkContentTypeEncoding(null, "");
-        checkContentTypeEncoding(null, "application/xml");
-        checkContentTypeEncoding(null, "application/xml;");
-        checkContentTypeEncoding(null, "multipart/mixed;boundary=frontier");
-        checkContentTypeEncoding(null, "multipart/mixed;boundary='frontier'");
-        checkContentTypeEncoding(null, "multipart/mixed;boundary=\"frontier\"");
-        checkContentTypeEncoding("UTF-16", "application/xml;charset=utf-16");
-        checkContentTypeEncoding("UTF-16", "application/xml;charset=UTF-16");
-        checkContentTypeEncoding("UTF-16", "application/xml;charset='UTF-16'");
-        checkContentTypeEncoding("UTF-16", "application/xml;charset=\"UTF-16\"");
-        checkContentTypeEncoding("UTF-32", "application/xml;charset=utf-32");
-        checkContentTypeEncoding("UTF-32", "application/xml;charset=UTF-32");
-        checkContentTypeEncoding("UTF-32", "application/xml;charset='UTF-32'");
-        checkContentTypeEncoding("UTF-32", "application/xml;charset=\"UTF-32\"");
+    protected String calculateHttpEncoding(final String httpContentType, final String bomEnc, final String xmlGuessEnc,
+        final String xmlEnc, final boolean lenient, final String defaultEncoding) throws IOException {
+        try (MockXmlStreamReader mock = new MockXmlStreamReader(defaultEncoding)) {
+            return mock.calculateHttpEncoding(bomEnc, xmlGuessEnc, xmlEnc, lenient, httpContentType);
+        }
+    }
+
+    protected String calculateRawEncoding(final String bomEnc, final String xmlGuessEnc, final String xmlEnc,
+        final String defaultEncoding) throws IOException {
+        try (MockXmlStreamReader mock = new MockXmlStreamReader(defaultEncoding)) {
+            return mock.calculateRawEncoding(bomEnc, xmlGuessEnc, xmlEnc);
+        }
+    }
+
+    @SuppressWarnings("boxing")
+    private void checkAppXml(final boolean expected, final String mime) {
+        assertEquals(expected, XmlStreamReader.isAppXml(mime), "Mime=[" + mime + "]");
     }
 
     private void checkContentTypeEncoding(final String expected, final String httpContentType) {
         assertEquals(expected, XmlStreamReader.getContentTypeEncoding(httpContentType), "ContentTypeEncoding=[" + httpContentType + "]");
     }
 
-    @Test
-    public void testContentTypeMime() {
-        checkContentTypeMime(null, null);
-        checkContentTypeMime("", "");
-        checkContentTypeMime("application/xml", "application/xml");
-        checkContentTypeMime("application/xml", "application/xml;");
-        checkContentTypeMime("application/xml", "application/xml;charset=utf-16");
-        checkContentTypeMime("application/xml", "application/xml;charset=utf-32");
-    }
-
     private void checkContentTypeMime(final String expected, final String httpContentType) {
         assertEquals(expected, XmlStreamReader.getContentTypeMime(httpContentType), "ContentTypeMime=[" + httpContentType + "]");
+    }
+
+    private void checkHttpEncoding(final String expected, final boolean lenient, final String httpContentType,
+            final String bomEnc, final String xmlGuessEnc, final String xmlEnc, final String defaultEncoding) throws IOException {
+        final StringBuilder builder = new StringBuilder();
+        builder.append("HttpEncoding=[").append(bomEnc).append("], ");
+        builder.append("lenient=[").append(lenient).append("], ");
+        builder.append("httpContentType=[").append(httpContentType).append("], ");
+        builder.append("bomEnc=[").append(bomEnc).append("], ");
+        builder.append("xmlGuessEnc=[").append(xmlGuessEnc).append("], ");
+        builder.append("xmlEnc=[").append(xmlEnc).append("], ");
+        builder.append("defaultEncoding=[").append(defaultEncoding).append("],");
+        final String encoding = calculateHttpEncoding(httpContentType, bomEnc, xmlGuessEnc, xmlEnc, lenient, defaultEncoding);
+        assertEquals(expected, encoding, builder.toString());
+    }
+
+    private void checkHttpError(final String msgSuffix, final boolean lenient, final String httpContentType,
+            final String bomEnc, final String xmlGuessEnc, final String xmlEnc, final String defaultEncoding) {
+        try {
+            checkHttpEncoding("XmlStreamReaderException", lenient, httpContentType, bomEnc, xmlGuessEnc, xmlEnc, defaultEncoding);
+            fail("Expected XmlStreamReaderException");
+        } catch (final XmlStreamReaderException e) {
+            assertTrue(e.getMessage().startsWith("Illegal encoding"), "Msg Start: " + e.getMessage());
+            assertTrue(e.getMessage().endsWith(msgSuffix), "Msg End: " + e.getMessage());
+            assertEquals(bomEnc, e.getBomEncoding(), "bomEnc");
+            assertEquals(xmlGuessEnc, e.getXmlGuessEncoding(), "xmlGuessEnc");
+            assertEquals(xmlEnc, e.getXmlEncoding(), "xmlEnc");
+            assertEquals(XmlStreamReader.getContentTypeEncoding(httpContentType), e.getContentTypeEncoding(),
+                    "ContentTypeEncoding");
+            assertEquals(XmlStreamReader.getContentTypeMime(httpContentType), e.getContentTypeMime(), "ContentTypeMime");
+        } catch (final Exception e) {
+            fail("Expected XmlStreamReaderException, but threw " + e);
+        }
+    }
+
+    private void checkRawEncoding(final String expected,
+            final String bomEnc, final String xmlGuessEnc, final String xmlEnc, final String defaultEncoding) throws IOException {
+        final StringBuilder builder = new StringBuilder();
+        builder.append("RawEncoding: ").append(bomEnc).append("], ");
+        builder.append("bomEnc=[").append(bomEnc).append("], ");
+        builder.append("xmlGuessEnc=[").append(xmlGuessEnc).append("], ");
+        builder.append("xmlEnc=[").append(xmlEnc).append("], ");
+        builder.append("defaultEncoding=[").append(defaultEncoding).append("],");
+        final String encoding = calculateRawEncoding(bomEnc, xmlGuessEnc, xmlEnc, defaultEncoding);
+        assertEquals(expected, encoding, builder.toString());
+    }
+
+    private void checkRawError(final String msgSuffix,
+            final String bomEnc, final String xmlGuessEnc, final String xmlEnc, final String defaultEncoding) {
+        try {
+            checkRawEncoding("XmlStreamReaderException", bomEnc, xmlGuessEnc, xmlEnc, defaultEncoding);
+            fail("Expected XmlStreamReaderException");
+        } catch (final XmlStreamReaderException e) {
+            assertTrue(e.getMessage().startsWith("Illegal encoding"), "Msg Start: " + e.getMessage());
+            assertTrue(e.getMessage().endsWith(msgSuffix), "Msg End: "   + e.getMessage());
+            assertEquals(bomEnc, e.getBomEncoding(), "bomEnc");
+            assertEquals(xmlGuessEnc, e.getXmlGuessEncoding(), "xmlGuessEnc");
+            assertEquals(xmlEnc, e.getXmlEncoding(), "xmlEnc");
+            assertNull(e.getContentTypeEncoding(), "ContentTypeEncoding");
+            assertNull(e.getContentTypeMime(), "ContentTypeMime");
+        } catch (final Exception e) {
+            fail("Expected XmlStreamReaderException, but threw " + e);
+        }
+    }
+
+    @SuppressWarnings("boxing")
+    private void checkTextXml(final boolean expected, final String mime) {
+        assertEquals(expected, XmlStreamReader.isTextXml(mime), "Mime=[" + mime + "]");
     }
 
     @Test
@@ -98,144 +162,6 @@ public class XmlStreamReaderUtilitiesTest {
         checkAppXml(false, "text/atom+xml");
         checkAppXml(true,  "application/xml-dtd");
         checkAppXml(true,  "application/xml-external-parsed-entity");
-    }
-
-    @SuppressWarnings("boxing")
-    private void checkAppXml(final boolean expected, final String mime) {
-        assertEquals(expected, XmlStreamReader.isAppXml(mime), "Mime=[" + mime + "]");
-    }
-
-    @Test
-    public void testTextXml() {
-        checkTextXml(false, null);
-        checkTextXml(false, "");
-        checkTextXml(true,  "text/xml");
-        checkTextXml(true,  "text/xml-external-parsed-entity");
-        checkTextXml(true,  "text/soap+xml");
-        checkTextXml(true,  "text/atom+xml");
-        checkTextXml(false, "text/atomxml");
-        checkTextXml(false, "application/xml");
-        checkTextXml(false, "application/atom+xml");
-    }
-
-    @SuppressWarnings("boxing")
-    private void checkTextXml(final boolean expected, final String mime) {
-        assertEquals(expected, XmlStreamReader.isTextXml(mime), "Mime=[" + mime + "]");
-    }
-
-    @Test
-    public void testCalculateRawEncodingNoBOM() throws IOException {
-        // No BOM        Expected    BOM         Guess       XML         Default
-        checkRawError(RAWMGS2,       "UTF-32",   null,       null,       null);
-        //
-        checkRawEncoding("UTF-8",    null,       null,       null,       null);
-        checkRawEncoding("UTF-8",    null,       "UTF-16BE", null,       null); /* why default & not Guess? */
-        checkRawEncoding("UTF-8",    null,       null,       "UTF-16BE", null); /* why default & not XMLEnc? */
-        checkRawEncoding("UTF-8",    null,       "UTF-8",    "UTF-8",    "UTF-16BE");
-        //
-        checkRawEncoding("UTF-16BE", null,       "UTF-16BE", "UTF-16BE", null);
-        checkRawEncoding("UTF-16BE", null,       null,       null,       "UTF-16BE");
-        checkRawEncoding("UTF-16BE", null,       "UTF-8",    null,       "UTF-16BE"); /* why default & not Guess? */
-        checkRawEncoding("UTF-16BE", null,       null,       "UTF-8",    "UTF-16BE"); /* why default & not Guess? */
-        checkRawEncoding("UTF-16BE", null,       "UTF-16BE", "UTF-16",   null);
-        checkRawEncoding("UTF-16LE", null,       "UTF-16LE", "UTF-16",   null);
-    }
-
-    @Test
-    public void testCalculateRawEncodingStandard() throws IOException {
-        // Standard BOM Checks           BOM         Other       Default
-        testCalculateRawEncodingStandard("UTF-8",    "UTF-16BE", "UTF-16LE");
-        testCalculateRawEncodingStandard("UTF-16BE", "UTF-8",    "UTF-16LE");
-        testCalculateRawEncodingStandard("UTF-16LE", "UTF-8",    "UTF-16BE");
-    }
-
-    @Test
-    public void testCalculateRawEncodingStandardUtf32() throws IOException {
-        // Standard BOM Checks           BOM         Other       Default
-        testCalculateRawEncodingStandard("UTF-8",    "UTF-32BE", "UTF-32LE");
-        testCalculateRawEncodingStandard("UTF-32BE", "UTF-8",    "UTF-32LE");
-        testCalculateRawEncodingStandard("UTF-32LE", "UTF-8",    "UTF-32BE");
-}
-
-    private void testCalculateRawEncodingStandard(final String bomEnc, final String otherEnc, final String defaultEnc) throws IOException {
-        //               Expected   BOM        Guess     XMLEnc    Default
-        checkRawEncoding(bomEnc,    bomEnc,    null,     null,     defaultEnc);
-        checkRawEncoding(bomEnc,    bomEnc,    bomEnc,   null,     defaultEnc);
-        checkRawError(RAWMGS1,      bomEnc,    otherEnc, null,     defaultEnc);
-        checkRawEncoding(bomEnc,    bomEnc,    null,     bomEnc,   defaultEnc);
-        checkRawError(RAWMGS1,      bomEnc,    null,     otherEnc, defaultEnc);
-        checkRawEncoding(bomEnc,    bomEnc,    bomEnc,   bomEnc,   defaultEnc);
-        checkRawError(RAWMGS1,      bomEnc,    bomEnc,   otherEnc, defaultEnc);
-        checkRawError(RAWMGS1,      bomEnc,    otherEnc, bomEnc,   defaultEnc);
-
-    }
-
-    @Test
-    public void testCalculateRawEncodingAdditionalUTF16() throws IOException {
-        //                           BOM         Guess       XML         Default
-        checkRawError(RAWMGS1,       "UTF-16BE", "UTF-16",   null,       null);
-        checkRawEncoding("UTF-16BE", "UTF-16BE", null,       "UTF-16",   null);
-        checkRawEncoding("UTF-16BE", "UTF-16BE", "UTF-16BE", "UTF-16",   null);
-        checkRawError(RAWMGS1,       "UTF-16BE", null,       "UTF-16LE", null);
-        checkRawError(RAWMGS1,       "UTF-16BE", "UTF-16BE", "UTF-16LE", null);
-        checkRawError(RAWMGS1,       "UTF-16LE", "UTF-16",   null,       null);
-        checkRawEncoding("UTF-16LE", "UTF-16LE", null,       "UTF-16",   null);
-        checkRawEncoding("UTF-16LE", "UTF-16LE", "UTF-16LE", "UTF-16",   null);
-        checkRawError(RAWMGS1,       "UTF-16LE", null,       "UTF-16BE", null);
-        checkRawError(RAWMGS1,       "UTF-16LE", "UTF-16LE", "UTF-16BE", null);
-    }
-
-    @Test
-    public void testCalculateRawEncodingAdditionalUTF32() throws IOException {
-        //                           BOM         Guess       XML         Default
-        checkRawError(RAWMGS1,       "UTF-32BE", "UTF-32",   null,       null);
-        checkRawEncoding("UTF-32BE", "UTF-32BE", null,       "UTF-32",   null);
-        checkRawEncoding("UTF-32BE", "UTF-32BE", "UTF-32BE", "UTF-32",   null);
-        checkRawError(RAWMGS1,       "UTF-32BE", null,       "UTF-32LE", null);
-        checkRawError(RAWMGS1,       "UTF-32BE", "UTF-32BE", "UTF-32LE", null);
-        checkRawError(RAWMGS1,       "UTF-32LE", "UTF-32",   null,       null);
-        checkRawEncoding("UTF-32LE", "UTF-32LE", null,       "UTF-32",   null);
-        checkRawEncoding("UTF-32LE", "UTF-32LE", "UTF-32LE", "UTF-32",   null);
-        checkRawError(RAWMGS1,       "UTF-32LE", null,       "UTF-32BE", null);
-        checkRawError(RAWMGS1,       "UTF-32LE", "UTF-32LE", "UTF-32BE", null);
-    }
-
-    private void checkRawEncoding(final String expected,
-            final String bomEnc, final String xmlGuessEnc, final String xmlEnc, final String defaultEncoding) throws IOException {
-        final StringBuilder builder = new StringBuilder();
-        builder.append("RawEncoding: ").append(bomEnc).append("], ");
-        builder.append("bomEnc=[").append(bomEnc).append("], ");
-        builder.append("xmlGuessEnc=[").append(xmlGuessEnc).append("], ");
-        builder.append("xmlEnc=[").append(xmlEnc).append("], ");
-        builder.append("defaultEncoding=[").append(defaultEncoding).append("],");
-        final String encoding = calculateRawEncoding(bomEnc,xmlGuessEnc,xmlEnc, defaultEncoding);
-        assertEquals(expected, encoding, builder.toString());
-    }
-
-    protected String calculateRawEncoding(final String bomEnc, final String xmlGuessEnc, final String xmlEnc,
-            final String defaultEncoding) throws IOException {
-        final MockXmlStreamReader mock = new MockXmlStreamReader(defaultEncoding);
-        final String enc = mock.calculateRawEncoding(bomEnc, xmlGuessEnc, xmlEnc);
-        mock.close();
-        return enc;
-    }
-
-    private void checkRawError(final String msgSuffix,
-            final String bomEnc, final String xmlGuessEnc, final String xmlEnc, final String defaultEncoding) {
-        try {
-            checkRawEncoding("XmlStreamReaderException", bomEnc, xmlGuessEnc, xmlEnc, defaultEncoding);
-            fail("Expected XmlStreamReaderException");
-        } catch (final XmlStreamReaderException e) {
-            assertTrue(e.getMessage().startsWith("Invalid encoding"), "Msg Start: " + e.getMessage());
-            assertTrue(e.getMessage().endsWith(msgSuffix), "Msg End: "   + e.getMessage());
-            assertEquals(bomEnc, e.getBomEncoding(), "bomEnc");
-            assertEquals(xmlGuessEnc, e.getXmlGuessEncoding(), "xmlGuessEnc");
-            assertEquals(xmlEnc, e.getXmlEncoding(), "xmlEnc");
-            assertNull(e.getContentTypeEncoding(), "ContentTypeEncoding");
-            assertNull(e.getContentTypeMime(), "ContentTypeMime");
-        } catch (final Exception e) {
-            fail("Expected XmlStreamReaderException, but threw " + e);
-        }
     }
 
     @Test
@@ -280,51 +206,122 @@ public class XmlStreamReaderUtilitiesTest {
         checkHttpEncoding("UTF-8",    false,  APPXML_UTF8,    "UTF-32BE", "UTF-32BE", "UTF-32BE", "UTF-32BE");
     }
 
-    private void checkHttpEncoding(final String expected, final boolean lenient, final String httpContentType,
-            final String bomEnc, final String xmlGuessEnc, final String xmlEnc, final String defaultEncoding) throws IOException {
-        final StringBuilder builder = new StringBuilder();
-        builder.append("HttpEncoding=[").append(bomEnc).append("], ");
-        builder.append("lenient=[").append(lenient).append("], ");
-        builder.append("httpContentType=[").append(httpContentType).append("], ");
-        builder.append("bomEnc=[").append(bomEnc).append("], ");
-        builder.append("xmlGuessEnc=[").append(xmlGuessEnc).append("], ");
-        builder.append("xmlEnc=[").append(xmlEnc).append("], ");
-        builder.append("defaultEncoding=[").append(defaultEncoding).append("],");
-        final String encoding = calculateHttpEncoding(httpContentType, bomEnc, xmlGuessEnc, xmlEnc, lenient, defaultEncoding);
-        assertEquals(expected, encoding, builder.toString());
+    @Test
+    public void testCalculateRawEncodingAdditionalUTF16() throws IOException {
+        //                           BOM         Guess       XML         Default
+        checkRawError(RAWMGS1,       "UTF-16BE", "UTF-16",   null,       null);
+        checkRawEncoding("UTF-16BE", "UTF-16BE", null,       "UTF-16",   null);
+        checkRawEncoding("UTF-16BE", "UTF-16BE", "UTF-16BE", "UTF-16",   null);
+        checkRawError(RAWMGS1,       "UTF-16BE", null,       "UTF-16LE", null);
+        checkRawError(RAWMGS1,       "UTF-16BE", "UTF-16BE", "UTF-16LE", null);
+        checkRawError(RAWMGS1,       "UTF-16LE", "UTF-16",   null,       null);
+        checkRawEncoding("UTF-16LE", "UTF-16LE", null,       "UTF-16",   null);
+        checkRawEncoding("UTF-16LE", "UTF-16LE", "UTF-16LE", "UTF-16",   null);
+        checkRawError(RAWMGS1,       "UTF-16LE", null,       "UTF-16BE", null);
+        checkRawError(RAWMGS1,       "UTF-16LE", "UTF-16LE", "UTF-16BE", null);
     }
 
-    protected String calculateHttpEncoding(final String httpContentType, final String bomEnc, final String xmlGuessEnc,
-            final String xmlEnc, final boolean lenient, final String defaultEncoding) throws IOException {
-        final MockXmlStreamReader mock = new MockXmlStreamReader(defaultEncoding);
-        final String enc = mock.calculateHttpEncoding(httpContentType, bomEnc, xmlGuessEnc, xmlEnc, lenient);
-        mock.close();
-        return enc;
+    @Test
+    public void testCalculateRawEncodingAdditionalUTF32() throws IOException {
+        //                           BOM         Guess       XML         Default
+        checkRawError(RAWMGS1,       "UTF-32BE", "UTF-32",   null,       null);
+        checkRawEncoding("UTF-32BE", "UTF-32BE", null,       "UTF-32",   null);
+        checkRawEncoding("UTF-32BE", "UTF-32BE", "UTF-32BE", "UTF-32",   null);
+        checkRawError(RAWMGS1,       "UTF-32BE", null,       "UTF-32LE", null);
+        checkRawError(RAWMGS1,       "UTF-32BE", "UTF-32BE", "UTF-32LE", null);
+        checkRawError(RAWMGS1,       "UTF-32LE", "UTF-32",   null,       null);
+        checkRawEncoding("UTF-32LE", "UTF-32LE", null,       "UTF-32",   null);
+        checkRawEncoding("UTF-32LE", "UTF-32LE", "UTF-32LE", "UTF-32",   null);
+        checkRawError(RAWMGS1,       "UTF-32LE", null,       "UTF-32BE", null);
+        checkRawError(RAWMGS1,       "UTF-32LE", "UTF-32LE", "UTF-32BE", null);
     }
 
-    private void checkHttpError(final String msgSuffix, final boolean lenient, final String httpContentType,
-            final String bomEnc, final String xmlGuessEnc, final String xmlEnc, final String defaultEncoding) {
-        try {
-            checkHttpEncoding("XmlStreamReaderException", lenient, httpContentType, bomEnc, xmlGuessEnc, xmlEnc, defaultEncoding);
-            fail("Expected XmlStreamReaderException");
-        } catch (final XmlStreamReaderException e) {
-            assertTrue(e.getMessage().startsWith("Invalid encoding"), "Msg Start: " + e.getMessage());
-            assertTrue(e.getMessage().endsWith(msgSuffix), "Msg End: " + e.getMessage());
-            assertEquals(bomEnc, e.getBomEncoding(), "bomEnc");
-            assertEquals(xmlGuessEnc, e.getXmlGuessEncoding(), "xmlGuessEnc");
-            assertEquals(xmlEnc, e.getXmlEncoding(), "xmlEnc");
-            assertEquals(XmlStreamReader.getContentTypeEncoding(httpContentType), e.getContentTypeEncoding(),
-                    "ContentTypeEncoding");
-            assertEquals(XmlStreamReader.getContentTypeMime(httpContentType), e.getContentTypeMime(), "ContentTypeMime");
-        } catch (final Exception e) {
-            fail("Expected XmlStreamReaderException, but threw " + e);
-        }
+    @Test
+    public void testCalculateRawEncodingNoBOM() throws IOException {
+        // No BOM        Expected    BOM         Guess       XML         Default
+        checkRawError(RAWMGS2,       "UTF-32",   null,       null,       null);
+        //
+        checkRawEncoding("UTF-8",    null,       null,       null,       null);
+        checkRawEncoding("UTF-8",    null,       "UTF-16BE", null,       null); /* why default & not Guess? */
+        checkRawEncoding("UTF-8",    null,       null,       "UTF-16BE", null); /* why default & not XMLEnc? */
+        checkRawEncoding("UTF-8",    null,       "UTF-8",    "UTF-8",    "UTF-16BE");
+        //
+        checkRawEncoding("UTF-16BE", null,       "UTF-16BE", "UTF-16BE", null);
+        checkRawEncoding("UTF-16BE", null,       null,       null,       "UTF-16BE");
+        checkRawEncoding("UTF-16BE", null,       "UTF-8",    null,       "UTF-16BE"); /* why default & not Guess? */
+        checkRawEncoding("UTF-16BE", null,       null,       "UTF-8",    "UTF-16BE"); /* why default & not Guess? */
+        checkRawEncoding("UTF-16BE", null,       "UTF-16BE", "UTF-16",   null);
+        checkRawEncoding("UTF-16LE", null,       "UTF-16LE", "UTF-16",   null);
     }
 
-    /** Mock {@link XmlStreamReader} implementation */
-    private static class MockXmlStreamReader extends XmlStreamReader {
-        MockXmlStreamReader(final String defaultEncoding) throws IOException {
-            super(new ByteArrayInputStream("".getBytes()), null, true, defaultEncoding);
-        }
+    @Test
+    public void testCalculateRawEncodingStandard() throws IOException {
+        // Standard BOM Checks           BOM         Other       Default
+        testCalculateRawEncodingStandard("UTF-8",    "UTF-16BE", "UTF-16LE");
+        testCalculateRawEncodingStandard("UTF-16BE", "UTF-8",    "UTF-16LE");
+        testCalculateRawEncodingStandard("UTF-16LE", "UTF-8",    "UTF-16BE");
+    }
+
+    private void testCalculateRawEncodingStandard(final String bomEnc, final String otherEnc, final String defaultEnc) throws IOException {
+        //               Expected   BOM        Guess     XMLEnc    Default
+        checkRawEncoding(bomEnc,    bomEnc,    null,     null,     defaultEnc);
+        checkRawEncoding(bomEnc,    bomEnc,    bomEnc,   null,     defaultEnc);
+        checkRawError(RAWMGS1,      bomEnc,    otherEnc, null,     defaultEnc);
+        checkRawEncoding(bomEnc,    bomEnc,    null,     bomEnc,   defaultEnc);
+        checkRawError(RAWMGS1,      bomEnc,    null,     otherEnc, defaultEnc);
+        checkRawEncoding(bomEnc,    bomEnc,    bomEnc,   bomEnc,   defaultEnc);
+        checkRawError(RAWMGS1,      bomEnc,    bomEnc,   otherEnc, defaultEnc);
+        checkRawError(RAWMGS1,      bomEnc,    otherEnc, bomEnc,   defaultEnc);
+
+    }
+
+    @Test
+    public void testCalculateRawEncodingStandardUtf32() throws IOException {
+        // Standard BOM Checks           BOM         Other       Default
+        testCalculateRawEncodingStandard("UTF-8",    "UTF-32BE", "UTF-32LE");
+        testCalculateRawEncodingStandard("UTF-32BE", "UTF-8",    "UTF-32LE");
+        testCalculateRawEncodingStandard("UTF-32LE", "UTF-8",    "UTF-32BE");
+}
+
+    @Test
+    public void testContentTypeEncoding() {
+        checkContentTypeEncoding(null, null);
+        checkContentTypeEncoding(null, "");
+        checkContentTypeEncoding(null, "application/xml");
+        checkContentTypeEncoding(null, "application/xml;");
+        checkContentTypeEncoding(null, "multipart/mixed;boundary=frontier");
+        checkContentTypeEncoding(null, "multipart/mixed;boundary='frontier'");
+        checkContentTypeEncoding(null, "multipart/mixed;boundary=\"frontier\"");
+        checkContentTypeEncoding("UTF-16", "application/xml;charset=utf-16");
+        checkContentTypeEncoding("UTF-16", "application/xml;charset=UTF-16");
+        checkContentTypeEncoding("UTF-16", "application/xml;charset='UTF-16'");
+        checkContentTypeEncoding("UTF-16", "application/xml;charset=\"UTF-16\"");
+        checkContentTypeEncoding("UTF-32", "application/xml;charset=utf-32");
+        checkContentTypeEncoding("UTF-32", "application/xml;charset=UTF-32");
+        checkContentTypeEncoding("UTF-32", "application/xml;charset='UTF-32'");
+        checkContentTypeEncoding("UTF-32", "application/xml;charset=\"UTF-32\"");
+    }
+
+    @Test
+    public void testContentTypeMime() {
+        checkContentTypeMime(null, null);
+        checkContentTypeMime("", "");
+        checkContentTypeMime("application/xml", "application/xml");
+        checkContentTypeMime("application/xml", "application/xml;");
+        checkContentTypeMime("application/xml", "application/xml;charset=utf-16");
+        checkContentTypeMime("application/xml", "application/xml;charset=utf-32");
+    }
+
+    @Test
+    public void testTextXml() {
+        checkTextXml(false, null);
+        checkTextXml(false, "");
+        checkTextXml(true,  "text/xml");
+        checkTextXml(true,  "text/xml-external-parsed-entity");
+        checkTextXml(true,  "text/soap+xml");
+        checkTextXml(true,  "text/atom+xml");
+        checkTextXml(false, "text/atomxml");
+        checkTextXml(false, "application/xml");
+        checkTextXml(false, "application/atom+xml");
     }
 }

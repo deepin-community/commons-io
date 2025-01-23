@@ -28,7 +28,9 @@ import java.io.InputStream;
  * A typical use case would be during debugging, to ensure that data is being
  * read as expected.
  * </p>
+ * @deprecated Use {@link BoundedInputStream} (unbounded by default).
  */
+@Deprecated
 public class CountingInputStream extends ProxyInputStream {
 
     /** The count of bytes that have passed. */
@@ -43,6 +45,93 @@ public class CountingInputStream extends ProxyInputStream {
         super(in);
     }
 
+    /**
+     * Adds the number of read bytes to the count.
+     *
+     * @param n number of bytes read, or -1 if no more bytes are available
+     * @throws IOException Not thrown here but subclasses may throw.
+     * @since 2.0
+     */
+    @Override
+    protected synchronized void afterRead(final int n) throws IOException {
+        if (n != EOF) {
+            count += n;
+        }
+    }
+
+    /**
+     * Gets number of bytes that have passed through this stream.
+     * <p>
+     * NOTE: This method is an alternative for {@code getCount()}
+     * and was added because that method returns an integer which will
+     * result in incorrect count for files over 2GB.
+     * </p>
+     *
+     * @return the number of bytes accumulated
+     * @since 1.3
+     */
+    public synchronized long getByteCount() {
+        return count;
+    }
+
+    /**
+     * Gets number of bytes that have passed through this stream.
+     * <p>
+     * This method throws an ArithmeticException if the
+     * count is greater than can be expressed by an {@code int}.
+     * See {@link #getByteCount()} for a method using a {@code long}.
+     * </p>
+     *
+     * @return the number of bytes accumulated
+     * @throws ArithmeticException if the byte count is too large
+     * @deprecated Use {@link #getByteCount()}.
+     */
+    @Deprecated
+    public int getCount() {
+        final long result = getByteCount();
+        if (result > Integer.MAX_VALUE) {
+            throw new ArithmeticException("The byte count " + result + " is too large to be converted to an int");
+        }
+        return (int) result;
+    }
+
+    /**
+     * Resets the byte count back to 0.
+     * <p>
+     * NOTE: This method is an alternative for {@code resetCount()}
+     * and was added because that method returns an integer which will
+     * result in incorrect count for files over 2GB.
+     * </p>
+     *
+     * @return the count previous to resetting
+     * @since 1.3
+     */
+    public synchronized long resetByteCount() {
+        final long tmp = count;
+        count = 0;
+        return tmp;
+    }
+
+    /**
+     * Resets the byte count back to 0.
+     * <p>
+     * This method throws an ArithmeticException if the
+     * count is greater than can be expressed by an {@code int}.
+     * See {@link #resetByteCount()} for a method using a {@code long}.
+     * </p>
+     *
+     * @return the count previous to resetting
+     * @throws ArithmeticException if the byte count is too large
+     * @deprecated Use {@link #resetByteCount()}.
+     */
+    @Deprecated
+    public int resetCount() {
+        final long result = resetByteCount();
+        if (result > Integer.MAX_VALUE) {
+            throw new ArithmeticException("The byte count " + result + " is too large to be converted to an int");
+        }
+        return (int) result;
+    }
 
     /**
      * Skips the stream over the specified number of bytes, adding the skipped
@@ -56,87 +145,8 @@ public class CountingInputStream extends ProxyInputStream {
     @Override
     public synchronized long skip(final long length) throws IOException {
         final long skip = super.skip(length);
-        this.count += skip;
+        count += skip;
         return skip;
-    }
-
-    /**
-     * Adds the number of read bytes to the count.
-     *
-     * @param n number of bytes read, or -1 if no more bytes are available
-     * @since 2.0
-     */
-    @Override
-    protected synchronized void afterRead(final int n) {
-        if (n != EOF) {
-            this.count += n;
-        }
-    }
-
-    /**
-     * The number of bytes that have passed through this stream.
-     * <p>
-     * NOTE: From v1.3 this method throws an ArithmeticException if the
-     * count is greater than can be expressed by an {@code int}.
-     * See {@link #getByteCount()} for a method using a {@code long}.
-     *
-     * @return the number of bytes accumulated
-     * @throws ArithmeticException if the byte count is too large
-     */
-    public int getCount() {
-        final long result = getByteCount();
-        if (result > Integer.MAX_VALUE) {
-            throw new ArithmeticException("The byte count " + result + " is too large to be converted to an int");
-        }
-        return (int) result;
-    }
-
-    /**
-     * Set the byte count back to 0.
-     * <p>
-     * NOTE: From v1.3 this method throws an ArithmeticException if the
-     * count is greater than can be expressed by an {@code int}.
-     * See {@link #resetByteCount()} for a method using a {@code long}.
-     *
-     * @return the count previous to resetting
-     * @throws ArithmeticException if the byte count is too large
-     */
-    public int resetCount() {
-        final long result = resetByteCount();
-        if (result > Integer.MAX_VALUE) {
-            throw new ArithmeticException("The byte count " + result + " is too large to be converted to an int");
-        }
-        return (int) result;
-    }
-
-    /**
-     * The number of bytes that have passed through this stream.
-     * <p>
-     * NOTE: This method is an alternative for {@code getCount()}
-     * and was added because that method returns an integer which will
-     * result in incorrect count for files over 2GB.
-     *
-     * @return the number of bytes accumulated
-     * @since 1.3
-     */
-    public synchronized long getByteCount() {
-        return this.count;
-    }
-
-    /**
-     * Set the byte count back to 0.
-     * <p>
-     * NOTE: This method is an alternative for {@code resetCount()}
-     * and was added because that method returns an integer which will
-     * result in incorrect count for files over 2GB.
-     *
-     * @return the count previous to resetting
-     * @since 1.3
-     */
-    public synchronized long resetByteCount() {
-        final long tmp = this.count;
-        this.count = 0;
-        return tmp;
     }
 
 }

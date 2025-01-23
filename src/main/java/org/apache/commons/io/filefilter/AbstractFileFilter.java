@@ -23,10 +23,12 @@ import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.List;
 import java.util.Objects;
 
 import org.apache.commons.io.file.PathFilter;
 import org.apache.commons.io.file.PathVisitor;
+import org.apache.commons.io.function.IOSupplier;
 
 /**
  * Abstracts the implementation of the {@link FileFilter} (IO), {@link FilenameFilter} (IO), {@link PathFilter} (NIO)
@@ -39,8 +41,37 @@ import org.apache.commons.io.file.PathVisitor;
  */
 public abstract class AbstractFileFilter implements IOFileFilter, PathVisitor {
 
-    static FileVisitResult toFileVisitResult(final boolean accept, final Path path) {
+    static FileVisitResult toDefaultFileVisitResult(final boolean accept) {
         return accept ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE;
+    }
+
+    /**
+     * What to do when this filter accepts.
+     */
+    private final FileVisitResult onAccept;
+
+    /**
+     * What to do when this filter rejects.
+     */
+    private final FileVisitResult onReject;
+
+    /**
+     * Constructs a new instance.
+     */
+    public AbstractFileFilter() {
+        this(FileVisitResult.CONTINUE, FileVisitResult.TERMINATE);
+    }
+
+    /**
+     * Constructs a new instance.
+     *
+     * @param onAccept What to do on acceptance.
+     * @param onReject What to do on rejection.
+     * @since 2.12.0.
+     */
+    protected AbstractFileFilter(final FileVisitResult onAccept, final FileVisitResult onReject) {
+        this.onAccept = onAccept;
+        this.onReject = onReject;
     }
 
     /**
@@ -68,6 +99,32 @@ public abstract class AbstractFileFilter implements IOFileFilter, PathVisitor {
         return accept(new File(dir, name));
     }
 
+    void append(final List<?> list, final StringBuilder buffer) {
+        for (int i = 0; i < list.size(); i++) {
+            if (i > 0) {
+                buffer.append(",");
+            }
+            buffer.append(list.get(i));
+        }
+    }
+
+    void append(final Object[] array, final StringBuilder buffer) {
+        for (int i = 0; i < array.length; i++) {
+            if (i > 0) {
+                buffer.append(",");
+            }
+            buffer.append(array[i]);
+        }
+    }
+
+    FileVisitResult get(final IOSupplier<FileVisitResult> supplier) {
+        try {
+            return supplier.get();
+        } catch (final IOException e) {
+            return handle(e);
+        }
+    }
+
     /**
      * Handles exceptions caught while accepting.
      *
@@ -87,6 +144,16 @@ public abstract class AbstractFileFilter implements IOFileFilter, PathVisitor {
     @Override
     public FileVisitResult preVisitDirectory(final Path dir, final BasicFileAttributes attributes) throws IOException {
         return accept(dir, attributes);
+    }
+
+    /**
+     * Converts a boolean into a FileVisitResult.
+     *
+     * @param accept accepted or rejected.
+     * @return a FileVisitResult.
+     */
+    FileVisitResult toFileVisitResult(final boolean accept) {
+        return accept ? onAccept : onReject;
     }
 
     /**

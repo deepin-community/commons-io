@@ -24,12 +24,12 @@ import java.util.Objects;
  * Writer implementation that writes the data to an {@link Appendable}
  * Object.
  * <p>
- * For example, can be used with a {@link java.lang.StringBuilder}
- * or {@link java.lang.StringBuffer}.
+ * For example, can be used with a {@link StringBuilder}
+ * or {@link StringBuffer}.
  * </p>
  *
  * @since 2.7
- * @see java.lang.Appendable
+ * @see Appendable
  *
  * @param <T> The type of the {@link Appendable} wrapped by this AppendableWriter.
  */
@@ -108,7 +108,7 @@ public class AppendableWriter <T extends Appendable> extends Writer {
     }
 
     /**
-     * Return the target appendable.
+     * Gets the target appendable.
      *
      * @return the target appendable
      */
@@ -126,8 +126,8 @@ public class AppendableWriter <T extends Appendable> extends Writer {
      */
     @Override
     public void write(final char[] cbuf, final int off, final int len) throws IOException {
-        Objects.requireNonNull(cbuf, "Character array is missing");
-        if (len < 0 || (off + len) > cbuf.length) {
+        Objects.requireNonNull(cbuf, "cbuf");
+        if (len < 0 || off + len > cbuf.length) {
             throw new IndexOutOfBoundsException("Array Size=" + cbuf.length +
                     ", offset=" + off + ", length=" + len);
         }
@@ -144,7 +144,7 @@ public class AppendableWriter <T extends Appendable> extends Writer {
      */
     @Override
     public void write(final int c) throws IOException {
-        appendable.append((char)c);
+        appendable.append((char) c);
     }
 
     /**
@@ -158,7 +158,7 @@ public class AppendableWriter <T extends Appendable> extends Writer {
     @Override
     public void write(final String str, final int off, final int len) throws IOException {
         // appendable.append will add "null" for a null String; add an explicit null check
-        Objects.requireNonNull(str, "String is missing");
+        Objects.requireNonNull(str, "str");
         appendable.append(str, off, off + len);
     }
 

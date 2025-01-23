@@ -23,7 +23,6 @@ import java.util.Objects;
 import org.apache.commons.io.IOUtils;
 
 /**
- *
  * An {@link InputStream} that repeats provided bytes for given target byte count.
  * <p>
  * Closing this input stream has no effect. The methods in this class can be called after the stream has been closed
@@ -33,7 +32,7 @@ import org.apache.commons.io.IOUtils;
  * @see InfiniteCircularInputStream
  * @since 2.8.0
  */
-public class CircularInputStream extends InputStream {
+public class CircularInputStream extends AbstractInputStream {
 
     /**
      * Throws an {@link IllegalArgumentException} if the input contains -1.
@@ -52,12 +51,12 @@ public class CircularInputStream extends InputStream {
     }
 
     private long byteCount;
-    private int position = -1;
+    private int position = IOUtils.EOF;
     private final byte[] repeatedContent;
     private final long targetByteCount;
 
     /**
-     * Creates an instance from the specified array of bytes.
+     * Constructs an instance from the specified array of bytes.
      *
      * @param repeatContent Input buffer to be repeated this buffer is not copied.
      * @param targetByteCount How many bytes the read. A negative number means an infinite target count.
@@ -71,8 +70,20 @@ public class CircularInputStream extends InputStream {
     }
 
     @Override
+    public int available() throws IOException {
+        // A negative targetByteCount means an infinite target count.
+        return isClosed() ? 0 : targetByteCount <= Integer.MAX_VALUE ? Math.max(Integer.MAX_VALUE, (int) targetByteCount) : Integer.MAX_VALUE;
+    }
+
+    @Override
+    public void close() throws IOException {
+        super.close();
+        byteCount = targetByteCount;
+    }
+
+    @Override
     public int read() {
-        if (targetByteCount >= 0) {
+        if (targetByteCount >= 0 || isClosed()) {
             if (byteCount == targetByteCount) {
                 return IOUtils.EOF;
             }

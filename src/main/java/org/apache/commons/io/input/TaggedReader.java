@@ -57,6 +57,10 @@ import org.apache.commons.io.TaggedIOException;
  *     // ... or process the exception that was caused by something else
  * }
  * </pre>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @see TaggedIOException
  * @since 2.7
@@ -69,12 +73,23 @@ public class TaggedReader extends ProxyReader {
     private final Serializable tag = UUID.randomUUID();
 
     /**
-     * Creates a tagging decorator for the given reader.
+     * Constructs a tagging decorator for the given reader.
      *
      * @param proxy reader to be decorated
      */
     public TaggedReader(final Reader proxy) {
         super(proxy);
+    }
+
+    /**
+     * Tags any IOExceptions thrown, wrapping and re-throwing.
+     *
+     * @param e The IOException thrown
+     * @throws IOException if an I/O error occurs.
+     */
+    @Override
+    protected void handleIOException(final IOException e) throws IOException {
+        throw new TaggedIOException(e, tag);
     }
 
     /**
@@ -97,17 +112,6 @@ public class TaggedReader extends ProxyReader {
      */
     public void throwIfCauseOf(final Throwable throwable) throws IOException {
         TaggedIOException.throwCauseIfTaggedWith(throwable, tag);
-    }
-
-    /**
-     * Tags any IOExceptions thrown, wrapping and re-throwing.
-     *
-     * @param e The IOException thrown
-     * @throws IOException if an I/O error occurs.
-     */
-    @Override
-    protected void handleIOException(final IOException e) throws IOException {
-        throw new TaggedIOException(e, tag);
     }
 
 }

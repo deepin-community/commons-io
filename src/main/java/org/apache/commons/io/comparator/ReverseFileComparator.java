@@ -19,27 +19,29 @@ package org.apache.commons.io.comparator;
 import java.io.File;
 import java.io.Serializable;
 import java.util.Comparator;
+import java.util.Objects;
 
 /**
  * Reverses the result of comparing two {@link File} objects using the delegate {@link Comparator}.
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.4
  */
-class ReverseFileComparator extends AbstractFileComparator implements Serializable {
+final class ReverseFileComparator extends AbstractFileComparator implements Serializable {
 
     private static final long serialVersionUID = -4808255005272229056L;
     private final Comparator<File> delegate;
 
     /**
-     * Construct an instance with the specified delegate {@link Comparator}.
+     * Constructs an instance with the specified delegate {@link Comparator}.
      *
      * @param delegate The comparator to delegate to.
      */
     public ReverseFileComparator(final Comparator<File> delegate) {
-        if (delegate == null) {
-            throw new IllegalArgumentException("Delegate comparator is missing");
-        }
-        this.delegate = delegate;
+        this.delegate = Objects.requireNonNull(delegate, "delegate");
     }
 
     /**

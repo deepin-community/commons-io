@@ -17,71 +17,91 @@
 package org.apache.commons.io.output;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * JUnit Test Case for {@link BrokenOutputStream}.
+ * Tests {@link BrokenOutputStream}.
  */
 public class BrokenOutputStreamTest {
 
-    private IOException exception;
+    private static BrokenOutputStream createBrokenOutputStream(final Throwable exception) {
+        if (exception instanceof IOException) {
+            return new BrokenOutputStream((IOException) exception);
+        }
+        return new BrokenOutputStream(exception);
+    }
 
-    private OutputStream stream;
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testClose(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenOutputStream stream = createBrokenOutputStream(exception);
+        assertEquals(exception, assertThrows(clazz, () -> stream.close()));
+    }
 
-    @BeforeEach
-    public void setUp() {
-        exception = new IOException("test exception");
-        stream = new BrokenOutputStream(exception);
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testFlush(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenOutputStream stream = createBrokenOutputStream(exception);
+        assertEquals(exception, assertThrows(clazz, () -> stream.flush()));
     }
 
     @Test
-    public void testWrite() {
-        try {
-            stream.write(1);
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
-
-        try {
-            stream.write(new byte[1]);
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
-
-        try {
-            stream.write(new byte[1], 0, 1);
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
+    public void testInstance() {
+        assertNotNull(BrokenOutputStream.INSTANCE);
     }
 
     @Test
-    public void testFlush() {
-        try {
-            stream.flush();
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
+    public void testTryWithResources() {
+        final IOException thrown = assertThrows(IOException.class, () -> {
+            try (OutputStream newStream = new BrokenOutputStream()) {
+                newStream.write(1);
+            }
+        });
+        assertEquals("Broken output stream", thrown.getMessage());
+
+        final Throwable[] suppressed = thrown.getSuppressed();
+        assertEquals(1, suppressed.length);
+        assertEquals(IOException.class, suppressed[0].getClass());
+        assertEquals("Broken output stream", suppressed[0].getMessage());
     }
 
-    @Test
-    public void testClose() {
-        try {
-            stream.close();
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertEquals(exception, e);
-        }
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testWriteByteArray(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenOutputStream stream = createBrokenOutputStream(exception);
+        assertEquals(exception, assertThrows(clazz, () -> stream.write(new byte[1])));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testWriteByteArrayIndexed(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenOutputStream stream = createBrokenOutputStream(exception);
+        assertEquals(exception, assertThrows(clazz, () -> stream.write(new byte[1], 0, 1)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.apache.commons.io.BrokenTestFactories#parameters")
+    public void testWriteInt(final Class<Throwable> clazz) throws Exception {
+        final Throwable exception = clazz.newInstance();
+        @SuppressWarnings("resource")
+        final BrokenOutputStream stream = createBrokenOutputStream(exception);
+        assertEquals(exception, assertThrows(clazz, () -> stream.write(1)));
     }
 
 }

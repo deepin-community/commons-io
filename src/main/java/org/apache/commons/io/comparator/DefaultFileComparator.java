@@ -21,25 +21,31 @@ import java.io.Serializable;
 import java.util.Comparator;
 
 /**
- * Compare two files using the <b>default</b> {@link File#compareTo(File)} method.
+ * Compares two files using the <b>default</b> {@link File#compareTo(File)} method.
  * <p>
  * This comparator can be used to sort lists or arrays of files
  * by using the default file comparison.
+ * </p>
  * <p>
  * Example of sorting a list of files using the
  * {@link #DEFAULT_COMPARATOR} singleton instance:
+ * </p>
  * <pre>
  *       List&lt;File&gt; list = ...
  *       ((AbstractFileComparator) DefaultFileComparator.DEFAULT_COMPARATOR).sort(list);
  * </pre>
  * <p>
- * Example of doing a <i>reverse</i> sort of an array of files using the
+ * Example of doing a <em>reverse</em> sort of an array of files using the
  * {@link #DEFAULT_REVERSE} singleton instance:
+ * </p>
  * <pre>
  *       File[] array = ...
  *       ((AbstractFileComparator) DefaultFileComparator.DEFAULT_REVERSE).sort(array);
  * </pre>
+ * <h2>Deprecating Serialization</h2>
  * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.4
  */
@@ -54,7 +60,14 @@ public class DefaultFileComparator extends AbstractFileComparator implements Ser
     public static final Comparator<File> DEFAULT_REVERSE = new ReverseFileComparator(DEFAULT_COMPARATOR);
 
     /**
-     * Compare the two files using the {@link File#compareTo(File)} method.
+     * Constructs a new instance.
+     */
+    public DefaultFileComparator() {
+        // empty
+    }
+
+    /**
+     * Compares the two files using the {@link File#compareTo(File)} method.
      *
      * @param file1 The first file to compare
      * @param file2 The second file to compare

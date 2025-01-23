@@ -50,8 +50,7 @@ public class PathVisitorFileFilter extends AbstractFileFilter {
     public boolean accept(final File file) {
         try {
             final Path path = file.toPath();
-            return visitFile(path,
-                file.exists() ? PathUtils.readBasicFileAttributes(path) : null) == FileVisitResult.CONTINUE;
+            return visitFile(path, file.exists() ? PathUtils.readBasicFileAttributes(path) : null) == FileVisitResult.CONTINUE;
         } catch (final IOException e) {
             return handle(e) == FileVisitResult.CONTINUE;
         }
@@ -69,11 +68,7 @@ public class PathVisitorFileFilter extends AbstractFileFilter {
 
     @Override
     public FileVisitResult accept(final Path path, final BasicFileAttributes attributes) {
-        try {
-            return Files.isDirectory(path) ? pathVisitor.postVisitDirectory(path, null) : visitFile(path, attributes);
-        } catch (final IOException e) {
-            return handle(e);
-        }
+        return get(() -> Files.isDirectory(path) ? pathVisitor.postVisitDirectory(path, null) : visitFile(path, attributes));
     }
 
     @Override

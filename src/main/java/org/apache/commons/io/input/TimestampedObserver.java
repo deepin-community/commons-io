@@ -30,12 +30,12 @@ import org.apache.commons.io.input.ObservableInputStream.Observer;
  * </p>
  *
  * <pre>
- * final TimestampedObserver timetampedObserver = new TimestampedObserver();
- * try (final ObservableInputStream inputStream = new ObservableInputStream(...),
- *     timetampedObserver)) {
+ * final TimestampedObserver timestampedObserver = new TimestampedObserver();
+ * try (ObservableInputStream inputStream = new ObservableInputStream(...),
+ *     timestampedObserver)) {
  *     ...
  * }
- * System.out.printf("IO duration: %s%n", timetampedObserver.getOpenToCloseDuration());
+ * System.out.printf("IO duration: %s%n", timestampedObserver.getOpenToCloseDuration());
  * </pre>
  *
  * @since 2.9.0
@@ -44,6 +44,13 @@ public class TimestampedObserver extends Observer {
 
     private volatile Instant closeInstant;
     private final Instant openInstant = Instant.now();
+
+    /**
+     * Constructs a new instance.
+     */
+    public TimestampedObserver() {
+        // empty
+    }
 
     @Override
     public void closed() throws IOException {
@@ -57,6 +64,15 @@ public class TimestampedObserver extends Observer {
      */
     public Instant getCloseInstant() {
         return closeInstant;
+    }
+
+    /**
+     * Gets the instant for when this instance was created.
+     *
+     * @return the instant for when this instance was created.
+     */
+    public Instant getOpenInstant() {
+        return openInstant;
     }
 
     /**
@@ -78,12 +94,13 @@ public class TimestampedObserver extends Observer {
     }
 
     /**
-     * Gets the instant for when this instance was created.
+     * Tests whether {@link #closed()} has been called.
      *
-     * @return the instant for when this instance was created.
+     * @return whether {@link #closed()} has been called.
+     * @since 2.12.0
      */
-    public Instant getOpenInstant() {
-        return openInstant;
+    public boolean isClosed() {
+        return closeInstant != null;
     }
 
     @Override

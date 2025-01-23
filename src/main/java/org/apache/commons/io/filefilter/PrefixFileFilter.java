@@ -22,8 +22,11 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.IOCase;
+import org.apache.commons.io.file.PathUtils;
 
 /**
  * Filters file names for a certain prefix.
@@ -33,7 +36,7 @@ import org.apache.commons.io.IOCase;
  * </p>
  * <h2>Using Classic IO</h2>
  * <pre>
- * File dir = new File(".");
+ * File dir = FileUtils.current();
  * String[] files = dir.list(new PrefixFileFilter("Test"));
  * for (String file : files) {
  *     System.out.println(file);
@@ -42,7 +45,7 @@ import org.apache.commons.io.IOCase;
  *
  * <h2>Using NIO</h2>
  * <pre>
- * final Path dir = Paths.get("");
+ * final Path dir = PathUtils.current();
  * final AccumulatorPathVisitor visitor = AccumulatorPathVisitor.withLongCounters(new PrefixFileFilter("Test"));
  * //
  * // Walk one dir
@@ -58,6 +61,10 @@ import org.apache.commons.io.IOCase;
  * System.out.println(visitor.getDirList());
  * System.out.println(visitor.getFileList());
  * </pre>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.0
  * @see FileFilterUtils#prefixFileFilter(String)
@@ -70,14 +77,14 @@ public class PrefixFileFilter extends AbstractFileFilter implements Serializable
     /** The file name prefixes to search for */
     private final String[] prefixes;
 
-    /** Whether the comparison is case sensitive. */
-    private final IOCase caseSensitivity;
+    /** Whether the comparison is case-sensitive. */
+    private final IOCase isCase;
 
     /**
      * Constructs a new Prefix file filter for a list of prefixes.
      *
      * @param prefixes  the prefixes to allow, must not be null
-     * @throws IllegalArgumentException if the prefix list is null
+     * @throws NullPointerException if the prefix list is null
      * @throws ClassCastException if the list does not contain Strings
      */
     public PrefixFileFilter(final List<String> prefixes) {
@@ -89,17 +96,15 @@ public class PrefixFileFilter extends AbstractFileFilter implements Serializable
      * specifying case-sensitivity.
      *
      * @param prefixes  the prefixes to allow, must not be null
-     * @param caseSensitivity  how to handle case sensitivity, null means case-sensitive
-     * @throws IllegalArgumentException if the prefix list is null
+     * @param ioCase  how to handle case sensitivity, null means case-sensitive
+     * @throws NullPointerException if the prefix list is null
      * @throws ClassCastException if the list does not contain Strings
      * @since 1.4
      */
-    public PrefixFileFilter(final List<String> prefixes, final IOCase caseSensitivity) {
-        if (prefixes == null) {
-            throw new IllegalArgumentException("The list of prefixes must not be null");
-        }
+    public PrefixFileFilter(final List<String> prefixes, final IOCase ioCase) {
+        Objects.requireNonNull(prefixes, "prefixes");
         this.prefixes = prefixes.toArray(EMPTY_STRING_ARRAY);
-        this.caseSensitivity = caseSensitivity == null ? IOCase.SENSITIVE : caseSensitivity;
+        this.isCase = IOCase.value(ioCase, IOCase.SENSITIVE);
     }
 
     /**
@@ -130,16 +135,14 @@ public class PrefixFileFilter extends AbstractFileFilter implements Serializable
      * specifying case-sensitivity.
      *
      * @param prefix  the prefix to allow, must not be null
-     * @param caseSensitivity  how to handle case sensitivity, null means case-sensitive
+     * @param ioCase  how to handle case sensitivity, null means case-sensitive
      * @throws IllegalArgumentException if the prefix is null
      * @since 1.4
      */
-    public PrefixFileFilter(final String prefix, final IOCase caseSensitivity) {
-        if (prefix == null) {
-            throw new IllegalArgumentException("The prefix must not be null");
-        }
+    public PrefixFileFilter(final String prefix, final IOCase ioCase) {
+        Objects.requireNonNull(prefix, "prefix");
         this.prefixes = new String[] {prefix};
-        this.caseSensitivity = caseSensitivity == null ? IOCase.SENSITIVE : caseSensitivity;
+        this.isCase = IOCase.value(ioCase, IOCase.SENSITIVE);
     }
 
     /**
@@ -147,17 +150,14 @@ public class PrefixFileFilter extends AbstractFileFilter implements Serializable
      * specifying case-sensitivity.
      *
      * @param prefixes  the prefixes to allow, must not be null
-     * @param caseSensitivity  how to handle case sensitivity, null means case-sensitive
+     * @param ioCase  how to handle case sensitivity, null means case-sensitive
      * @throws IllegalArgumentException if the prefix is null
      * @since 1.4
      */
-    public PrefixFileFilter(final String[] prefixes, final IOCase caseSensitivity) {
-        if (prefixes == null) {
-            throw new IllegalArgumentException("The array of prefixes must not be null");
-        }
-        this.prefixes = new String[prefixes.length];
-        System.arraycopy(prefixes, 0, this.prefixes, 0, prefixes.length);
-        this.caseSensitivity = caseSensitivity == null ? IOCase.SENSITIVE : caseSensitivity;
+    public PrefixFileFilter(final String[] prefixes, final IOCase ioCase) {
+        Objects.requireNonNull(prefixes, "prefixes");
+        this.prefixes = prefixes.clone();
+        this.isCase = IOCase.value(ioCase, IOCase.SENSITIVE);
     }
 
     /**
@@ -192,17 +192,11 @@ public class PrefixFileFilter extends AbstractFileFilter implements Serializable
      */
     @Override
     public FileVisitResult accept(final Path file, final BasicFileAttributes attributes) {
-        final Path fileName = file.getFileName();
-        return toFileVisitResult(accept(fileName == null ? null : fileName.toFile()), file);
+        return toFileVisitResult(accept(PathUtils.getFileName(file, Path::toFile)));
     }
 
     private boolean accept(final String name) {
-        for (final String prefix : prefixes) {
-            if (caseSensitivity.checkStartsWith(name, prefix)) {
-                return true;
-            }
-        }
-        return false;
+        return Stream.of(prefixes).anyMatch(prefix -> isCase.checkStartsWith(name, prefix));
     }
 
     /**
@@ -215,14 +209,7 @@ public class PrefixFileFilter extends AbstractFileFilter implements Serializable
         final StringBuilder buffer = new StringBuilder();
         buffer.append(super.toString());
         buffer.append("(");
-        if (prefixes != null) {
-            for (int i = 0; i < prefixes.length; i++) {
-                if (i > 0) {
-                    buffer.append(",");
-                }
-                buffer.append(prefixes[i]);
-            }
-        }
+        append(prefixes, buffer);
         buffer.append(")");
         return buffer.toString();
     }

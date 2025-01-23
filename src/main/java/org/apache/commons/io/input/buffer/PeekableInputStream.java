@@ -20,29 +20,33 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
+import org.apache.commons.io.IOUtils;
+
 /**
  * Implements a buffered input stream, which allows to peek into the buffers first bytes. This comes in handy when
  * manually implementing scanners, lexers, parsers, and the like.
+ *
+ * @since 2.7
  */
 public class PeekableInputStream extends CircularBufferInputStream {
 
     /**
-     * Creates a new instance, which filters the given input stream, and uses the given buffer size.
+     * Constructs a new instance, which filters the given input stream, and uses a reasonable default buffer size ({@link IOUtils#DEFAULT_BUFFER_SIZE}).
+     *
+     * @param inputStream The input stream, which is being buffered.
+     */
+    public PeekableInputStream(final InputStream inputStream) {
+        super(inputStream);
+    }
+
+    /**
+     * Constructs a new instance, which filters the given input stream, and uses the given buffer size.
      *
      * @param inputStream The input stream, which is being buffered.
      * @param bufferSize The size of the {@link CircularByteBuffer}, which is used internally.
      */
     public PeekableInputStream(final InputStream inputStream, final int bufferSize) {
         super(inputStream, bufferSize);
-    }
-
-    /**
-     * Creates a new instance, which filters the given input stream, and uses a reasonable default buffer size (8192).
-     *
-     * @param inputStream The input stream, which is being buffered.
-     */
-    public PeekableInputStream(final InputStream inputStream) {
-        super(inputStream);
     }
 
     /**

@@ -28,11 +28,10 @@ import org.apache.commons.io.input.ProxyReader;
 public class ThrowOnCloseReader extends ProxyReader {
 
     /**
-     * Default ctor.
+     * Default constructor.
      */
-    @SuppressWarnings("resource")
     public ThrowOnCloseReader() {
-        super(new NullReader());
+        super(NullReader.INSTANCE);
     }
 
     /**

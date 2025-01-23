@@ -18,6 +18,8 @@ package org.apache.commons.io.input.buffer;
 
 import static org.apache.commons.io.IOUtils.EOF;
 
+import java.io.BufferedInputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
@@ -26,12 +28,11 @@ import org.apache.commons.io.IOUtils;
 
 /**
  * Implements a buffered input stream, which is internally based on a {@link CircularByteBuffer}. Unlike the
- * {@link java.io.BufferedInputStream}, this one doesn't need to reallocate byte arrays internally.
+ * {@link BufferedInputStream}, this one doesn't need to reallocate byte arrays internally.
+ *
+ * @since 2.7
  */
-public class CircularBufferInputStream extends InputStream {
-
-    /** What we are streaming, used to fill the internal buffer. */
-    protected final InputStream in;
+public class CircularBufferInputStream extends FilterInputStream {
 
     /** Internal buffer. */
     protected final CircularByteBuffer buffer;
@@ -39,33 +40,41 @@ public class CircularBufferInputStream extends InputStream {
     /** Internal buffer size. */
     protected final int bufferSize;
 
-    /** Whether we've see the input stream EOF. */
+    /** Whether we've seen the input stream EOF. */
     private boolean eof;
 
     /**
-     * Creates a new instance, which filters the given input stream, and uses the given buffer size.
-     *
-     * @param inputStream The input stream, which is being buffered.
-     * @param bufferSize The size of the {@link CircularByteBuffer}, which is used internally.
-     */
-    public CircularBufferInputStream(final InputStream inputStream, final int bufferSize) {
-        if (bufferSize <= 0) {
-            throw new IllegalArgumentException("Invalid bufferSize: " + bufferSize);
-        }
-        this.in = Objects.requireNonNull(inputStream, "inputStream");
-        this.buffer = new CircularByteBuffer(bufferSize);
-        this.bufferSize = bufferSize;
-        this.eof = false;
-    }
-
-    /**
-     * Creates a new instance, which filters the given input stream, and uses a reasonable default buffer size
+     * Constructs a new instance, which filters the given input stream, and uses a reasonable default buffer size
      * ({@link IOUtils#DEFAULT_BUFFER_SIZE}).
      *
      * @param inputStream The input stream, which is being buffered.
      */
     public CircularBufferInputStream(final InputStream inputStream) {
         this(inputStream, IOUtils.DEFAULT_BUFFER_SIZE);
+    }
+
+    /**
+     * Constructs a new instance, which filters the given input stream, and uses the given buffer size.
+     *
+     * @param inputStream The input stream, which is being buffered.
+     * @param bufferSize The size of the {@link CircularByteBuffer}, which is used internally.
+     */
+    @SuppressWarnings("resource") // Caller closes InputStream
+    public CircularBufferInputStream(final InputStream inputStream, final int bufferSize) {
+        super(Objects.requireNonNull(inputStream, "inputStream"));
+        if (bufferSize <= 0) {
+            throw new IllegalArgumentException("Illegal bufferSize: " + bufferSize);
+        }
+        this.buffer = new CircularByteBuffer(bufferSize);
+        this.bufferSize = bufferSize;
+        this.eof = false;
+    }
+
+    @Override
+    public void close() throws IOException {
+        super.close();
+        eof = true;
+        buffer.clear();
     }
 
     /**
@@ -115,11 +124,6 @@ public class CircularBufferInputStream extends InputStream {
     }
 
     @Override
-    public int read(final byte[] buffer) throws IOException {
-        return read(buffer, 0, buffer.length);
-    }
-
-    @Override
     public int read(final byte[] targetBuffer, final int offset, final int length) throws IOException {
         Objects.requireNonNull(targetBuffer, "targetBuffer");
         if (offset < 0) {
@@ -136,12 +140,5 @@ public class CircularBufferInputStream extends InputStream {
             targetBuffer[offset + i] = buffer.read();
         }
         return result;
-    }
-
-    @Override
-    public void close() throws IOException {
-        in.close();
-        eof = true;
-        buffer.clear();
     }
 }

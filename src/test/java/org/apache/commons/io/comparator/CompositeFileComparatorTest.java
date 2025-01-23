@@ -32,14 +32,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test case for {@link CompositeFileComparator}.
+ * Tests {@link CompositeFileComparator}.
  */
-public class CompositeFileComparatorTest extends ComparatorAbstractTestCase {
+public class CompositeFileComparatorTest extends ComparatorAbstractTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        comparator = new CompositeFileComparator(
-                (AbstractFileComparator) SizeFileComparator.SIZE_COMPARATOR, (AbstractFileComparator) ExtensionFileComparator.EXTENSION_COMPARATOR);
+        comparator = new CompositeFileComparator(SizeFileComparator.SIZE_COMPARATOR, ExtensionFileComparator.EXTENSION_COMPARATOR);
         reverse = new ReverseFileComparator(comparator);
         lessFile   = new File(dir, "xyz.txt");
         equalFile1 = new File(dir, "foo.txt");
@@ -50,7 +49,7 @@ public class CompositeFileComparatorTest extends ComparatorAbstractTestCase {
                     + " as the parent directory does not exist");
         }
 
-        try (final BufferedOutputStream output3 =
+        try (BufferedOutputStream output3 =
                 new BufferedOutputStream(Files.newOutputStream(lessFile.toPath()))) {
             TestUtils.generateTestData(output3, 32);
         }
@@ -58,7 +57,7 @@ public class CompositeFileComparatorTest extends ComparatorAbstractTestCase {
             throw new IOException("Cannot create file " + equalFile1
                     + " as the parent directory does not exist");
         }
-        try (final BufferedOutputStream output2 =
+        try (BufferedOutputStream output2 =
                 new BufferedOutputStream(Files.newOutputStream(equalFile1.toPath()))) {
             TestUtils.generateTestData(output2, 48);
         }
@@ -66,7 +65,7 @@ public class CompositeFileComparatorTest extends ComparatorAbstractTestCase {
             throw new IOException("Cannot create file " + equalFile2
                     + " as the parent directory does not exist");
         }
-        try (final BufferedOutputStream output1 =
+        try (BufferedOutputStream output1 =
                 new BufferedOutputStream(Files.newOutputStream(equalFile2.toPath()))) {
             TestUtils.generateTestData(output1, 48);
         }
@@ -74,17 +73,39 @@ public class CompositeFileComparatorTest extends ComparatorAbstractTestCase {
             throw new IOException("Cannot create file " + moreFile
                     + " as the parent directory does not exist");
         }
-        try (final BufferedOutputStream output =
+        try (BufferedOutputStream output =
                 new BufferedOutputStream(Files.newOutputStream(moreFile.toPath()))) {
             TestUtils.generateTestData(output, 48);
         }
     }
 
     /**
+     * Test Constructor with null array
+     */
+    @Test
+    public void testConstructorArray_Null() {
+        final Comparator<File> c = new CompositeFileComparator((Comparator<File>[]) null);
+        assertEquals(0, c.compare(lessFile, moreFile), "less,more");
+        assertEquals(0, c.compare(moreFile, lessFile), "more,less");
+        assertEquals("CompositeFileComparator{}", c.toString(), "toString");
+    }
+
+    /**
      * Test Constructor with null Iterable
      */
     @Test
-    public void constructorIterable_order() {
+    public void testConstructorIterable_Null() {
+        final Comparator<File> c = new CompositeFileComparator((Iterable<Comparator<File>>) null);
+        assertEquals(0, c.compare(lessFile, moreFile), "less,more");
+        assertEquals(0, c.compare(moreFile, lessFile), "more,less");
+        assertEquals("CompositeFileComparator{}", c.toString(), "toString");
+    }
+
+    /**
+     * Test Constructor with null Iterable
+     */
+    @Test
+    public void testConstructorIterable_order() {
         final List<Comparator<File>> list = new ArrayList<>();
         list.add(SizeFileComparator.SIZE_COMPARATOR);
         list.add(ExtensionFileComparator.EXTENSION_COMPARATOR);
@@ -93,27 +114,5 @@ public class CompositeFileComparatorTest extends ComparatorAbstractTestCase {
         assertEquals(0, c.compare(equalFile1, equalFile2), "equal");
         assertTrue(c.compare(lessFile, moreFile) < 0, "less");
         assertTrue(c.compare(moreFile, lessFile) > 0, "more");
-    }
-
-    /**
-     * Test Constructor with null Iterable
-     */
-    @Test
-    public void constructorIterable_Null() {
-        final Comparator<File> c = new CompositeFileComparator((Iterable<Comparator<File>>)null);
-        assertEquals(0, c.compare(lessFile, moreFile), "less,more");
-        assertEquals(0, c.compare(moreFile, lessFile), "more,less");
-        assertEquals("CompositeFileComparator{}", c.toString(), "toString");
-    }
-
-    /**
-     * Test Constructor with null array
-     */
-    @Test
-    public void constructorArray_Null() {
-        final Comparator<File> c = new CompositeFileComparator((Comparator<File>[])null);
-        assertEquals(0, c.compare(lessFile, moreFile), "less,more");
-        assertEquals(0, c.compare(moreFile, lessFile), "more,less");
-        assertEquals("CompositeFileComparator{}", c.toString(), "toString");
     }
 }

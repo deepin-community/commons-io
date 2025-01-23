@@ -18,6 +18,7 @@
 package org.apache.commons.io.file;
 
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Objects;
 
 import org.apache.commons.io.file.Counters.PathCounters;
+import org.apache.commons.io.function.IOBiFunction;
 
 /**
  * Accumulates normalized paths during visitation.
@@ -35,9 +37,9 @@ import org.apache.commons.io.file.Counters.PathCounters;
  * <h2>Example</h2>
  *
  * <pre>
- * Path dir = Paths.get("");
+ * Path dir = PathUtils.current();
  * // We are interested in files older than one day
- * long cutoff = System.currentTimeMillis() - (24 * 60 * 60 * 1000);
+ * Instant cutoff = Instant.now().minus(Duration.ofDays(1));
  * AccumulatorPathVisitor visitor = AccumulatorPathVisitor.withLongCounters(new AgeFileFilter(cutoff));
  * //
  * // Walk one dir
@@ -59,7 +61,7 @@ import org.apache.commons.io.file.Counters.PathCounters;
 public class AccumulatorPathVisitor extends CountingPathVisitor {
 
     /**
-     * Creates a new instance configured with a BigInteger {@link PathCounters}.
+     * Constructs a new instance configured with a BigInteger {@link PathCounters}.
      *
      * @return a new instance configured with a BigInteger {@link PathCounters}.
      */
@@ -68,7 +70,7 @@ public class AccumulatorPathVisitor extends CountingPathVisitor {
     }
 
     /**
-     * Creates a new instance configured with a BigInteger {@link PathCounters}.
+     * Constructs a new instance configured with a BigInteger {@link PathCounters}.
      *
      * @param fileFilter Filters files to accumulate and count.
      * @param dirFilter Filters directories to accumulate and count.
@@ -81,7 +83,7 @@ public class AccumulatorPathVisitor extends CountingPathVisitor {
     }
 
     /**
-     * Creates a new instance configured with a long {@link PathCounters}.
+     * Constructs a new instance configured with a long {@link PathCounters}.
      *
      * @return a new instance configured with a long {@link PathCounters}.
      */
@@ -90,7 +92,7 @@ public class AccumulatorPathVisitor extends CountingPathVisitor {
     }
 
     /**
-     * Creates a new instance configured with a long {@link PathCounters}.
+     * Constructs a new instance configured with a long {@link PathCounters}.
      *
      * @param fileFilter Filters files to accumulate and count.
      * @param dirFilter Filters directories to accumulate and count.
@@ -131,9 +133,22 @@ public class AccumulatorPathVisitor extends CountingPathVisitor {
      * @param dirFilter Filters which directories to count.
      * @since 2.9.0
      */
-    public AccumulatorPathVisitor(final PathCounters pathCounter, final PathFilter fileFilter,
-        final PathFilter dirFilter) {
+    public AccumulatorPathVisitor(final PathCounters pathCounter, final PathFilter fileFilter, final PathFilter dirFilter) {
         super(pathCounter, fileFilter, dirFilter);
+    }
+
+    /**
+     * Constructs a new instance.
+     *
+     * @param pathCounter How to count path visits.
+     * @param fileFilter Filters which files to count.
+     * @param dirFilter Filters which directories to count.
+     * @param visitFileFailed Called on {@link #visitFileFailed(Path, IOException)}.
+     * @since 2.12.0
+     */
+    public AccumulatorPathVisitor(final PathCounters pathCounter, final PathFilter fileFilter, final PathFilter dirFilter,
+        final IOBiFunction<Path, IOException, FileVisitResult> visitFileFailed) {
+        super(pathCounter, fileFilter, dirFilter, visitFileFailed);
     }
 
     private void add(final List<Path> list, final Path dir) {
@@ -156,21 +171,21 @@ public class AccumulatorPathVisitor extends CountingPathVisitor {
     }
 
     /**
-     * Gets the list of visited directories.
+     * Gets a copy of the list of visited directories.
      *
-     * @return the list of visited directories.
+     * @return a copy of the list of visited directories.
      */
     public List<Path> getDirList() {
-        return dirList;
+        return new ArrayList<>(dirList);
     }
 
     /**
-     * Gets the list of visited files.
+     * Gets a copy of the list of visited files.
      *
-     * @return the list of visited files.
+     * @return a copy of the list of visited files.
      */
     public List<Path> getFileList() {
-        return fileList;
+        return new ArrayList<>(fileList);
     }
 
     @Override

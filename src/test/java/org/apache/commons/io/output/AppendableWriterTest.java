@@ -22,8 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Unit tests for {@link AppendableWriter}.
- *
+ * Tests {@link AppendableWriter}.
  */
 public class AppendableWriterTest {
 
@@ -34,11 +33,34 @@ public class AppendableWriterTest {
         out = new AppendableWriter<>(new StringBuilder());
     }
 
+    @SuppressWarnings("resource")
     @Test
-    public void testWriteInt() throws Exception {
-        out.write('F');
+    public void testAppendChar() throws Exception {
+        out.append('F');
 
         assertEquals("F", out.getAppendable().toString());
+    }
+
+    @SuppressWarnings("resource")
+    @Test
+    public void testAppendCharSequence() throws Exception {
+        final String testData = "ABCD";
+
+        out.append(testData);
+        out.append(null);
+
+        assertEquals(testData + "null", out.getAppendable().toString());
+    }
+
+    @SuppressWarnings("resource")
+    @Test
+    public void testAppendSubSequence() throws Exception {
+        final String testData = "ABCD";
+
+        out.append(testData, 1, 3);
+        out.append(null, 1, 3);
+
+        assertEquals(testData.substring(1, 3) + "ul", out.getAppendable().toString());
     }
 
     @Test
@@ -51,38 +73,18 @@ public class AppendableWriterTest {
     }
 
     @Test
+    public void testWriteInt() throws Exception {
+        out.write('F');
+
+        assertEquals("F", out.getAppendable().toString());
+    }
+
+    @Test
     public void testWriteString() throws Exception {
         final String testData = "ABCD";
 
         out.write(testData);
 
         assertEquals(testData, out.getAppendable().toString());
-    }
-
-    @Test
-    public void testAppendCharSequence() throws Exception {
-        final String testData = "ABCD";
-
-        out.append(testData);
-        out.append(null);
-
-        assertEquals(testData + "null", out.getAppendable().toString());
-    }
-
-    @Test
-    public void testAppendSubSequence() throws Exception {
-        final String testData = "ABCD";
-
-        out.append(testData, 1, 3);
-        out.append(null, 1, 3);
-
-        assertEquals(testData.substring(1, 3) + "ul", out.getAppendable().toString());
-    }
-
-    @Test
-    public void testAppendChar() throws Exception {
-        out.append('F');
-
-        assertEquals("F", out.getAppendable().toString());
     }
 }
