@@ -28,14 +28,24 @@ import java.util.Objects;
  * <p>
  * <strong>Note:</strong> Supports {@link #mark(int)} and {@link #reset()}.
  * </p>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.4
  */
 public class CharSequenceReader extends Reader implements Serializable {
 
     private static final long serialVersionUID = 3724187752191401220L;
+
+    /** Source for reading. */
     private final CharSequence charSequence;
+
+    /** Reading index. */
     private int idx;
+
+    /** Reader mark. */
     private int mark;
 
     /**
@@ -116,12 +126,10 @@ public class CharSequenceReader extends Reader implements Serializable {
      */
     public CharSequenceReader(final CharSequence charSequence, final int start, final int end) {
         if (start < 0) {
-            throw new IllegalArgumentException(
-                    "Start index is less than zero: " + start);
+            throw new IllegalArgumentException("Start index is less than zero: " + start);
         }
         if (end < start) {
-            throw new IllegalArgumentException(
-                    "End index is less than start " + start + ": " + end);
+            throw new IllegalArgumentException("End index is less than start " + start + ": " + end);
         }
         // Don't check the start and end indexes against the CharSequence,
         // to let it grow and shrink without breaking existing behavior.
@@ -135,12 +143,12 @@ public class CharSequenceReader extends Reader implements Serializable {
     }
 
     /**
-     * Returns the index in the character sequence to start reading from, taking into account its length.
-     *
-     * @return The start index in the character sequence (inclusive).
+     * Close resets the file back to the start and removes any marked position.
      */
-    private int start() {
-        return Math.min(charSequence.length(), start);
+    @Override
+    public void close() {
+        idx = start;
+        mark = start;
     }
 
     /**
@@ -154,25 +162,6 @@ public class CharSequenceReader extends Reader implements Serializable {
          * Use Integer.MAX_VALUE to get the same behavior as before - use the entire CharSequence.
          */
         return Math.min(charSequence.length(), end == null ? Integer.MAX_VALUE : end);
-    }
-
-    /**
-     * Close resets the file back to the start and removes any marked position.
-     */
-    @Override
-    public void close() {
-        idx = start;
-        mark = start;
-    }
-
-    /**
-     * Tells whether this stream is ready to be read.
-     *
-     * @return {@code true} if more characters from the character sequence are available, or {@code false} otherwise.
-     */
-    @Override
-    public boolean ready() {
-        return idx < end();
     }
 
     /**
@@ -254,10 +243,20 @@ public class CharSequenceReader extends Reader implements Serializable {
             if (c == EOF) {
                 return count;
             }
-            array[offset + i] = (char)c;
+            array[offset + i] = (char) c;
             count++;
         }
         return count;
+    }
+
+    /**
+     * Tells whether this stream is ready to be read.
+     *
+     * @return {@code true} if more characters from the character sequence are available, or {@code false} otherwise.
+     */
+    @Override
+    public boolean ready() {
+        return idx < end();
     }
 
     /**
@@ -278,27 +277,34 @@ public class CharSequenceReader extends Reader implements Serializable {
     @Override
     public long skip(final long n) {
         if (n < 0) {
-            throw new IllegalArgumentException(
-                    "Number of characters to skip is less than zero: " + n);
+            throw new IllegalArgumentException("Number of characters to skip is less than zero: " + n);
         }
         if (idx >= end()) {
             return 0;
         }
-        final int dest = (int)Math.min(end(), idx + n);
+        final int dest = (int) Math.min(end(), idx + n);
         final int count = dest - idx;
         idx = dest;
         return count;
     }
 
     /**
-     * Return a String representation of the underlying
+     * Returns the index in the character sequence to start reading from, taking into account its length.
+     *
+     * @return The start index in the character sequence (inclusive).
+     */
+    private int start() {
+        return Math.min(charSequence.length(), start);
+    }
+
+    /**
+     * Gets a String representation of the underlying
      * character sequence.
      *
      * @return The contents of the character sequence
      */
     @Override
     public String toString() {
-        final CharSequence subSequence = charSequence.subSequence(start(), end());
-        return subSequence.toString();
+        return charSequence.subSequence(start(), end()).toString();
     }
 }

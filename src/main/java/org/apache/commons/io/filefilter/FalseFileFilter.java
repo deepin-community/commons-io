@@ -24,6 +24,10 @@ import java.nio.file.attribute.BasicFileAttributes;
 
 /**
  * A file filter that always returns false.
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.0
  * @see FileFilterUtils#falseFileFilter()
@@ -90,24 +94,24 @@ public class FalseFileFilter implements IOFileFilter, Serializable {
     }
 
     @Override
-    public IOFileFilter negate() {
-        return TrueFileFilter.INSTANCE;
-    }
-
-    @Override
-    public String toString() {
-        return TO_STRING;
-    }
-
-    @Override
     public IOFileFilter and(final IOFileFilter fileFilter) {
         // FALSE AND expression <=> FALSE
         return INSTANCE;
     }
 
     @Override
+    public IOFileFilter negate() {
+        return TrueFileFilter.INSTANCE;
+    }
+
+    @Override
     public IOFileFilter or(final IOFileFilter fileFilter) {
         // FALSE OR expression <=> expression
         return fileFilter;
+    }
+
+    @Override
+    public String toString() {
+        return TO_STRING;
     }
 }

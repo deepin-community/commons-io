@@ -18,13 +18,14 @@ package org.apache.commons.io.input;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.function.Supplier;
+
+import org.apache.commons.io.function.Erase;
 
 /**
- * Broken reader. This reader always throws an {@link IOException} from
- * all the {@link Reader} methods where the exception is declared.
+ * Always throws an exception from all {@link Reader} methods where {@link IOException} is declared.
  * <p>
- * This class is mostly useful for testing error handling in code that uses a
- * reader.
+ * This class is mostly useful for testing error handling.
  * </p>
  *
  * @since 2.7
@@ -32,92 +33,130 @@ import java.io.Reader;
 public class BrokenReader extends Reader {
 
     /**
-     * The exception that is thrown by all methods of this class.
-     */
-    private final IOException exception;
-
-    /**
-     * Creates a new reader that always throws the given exception.
+     * A singleton instance using a default IOException.
      *
-     * @param exception the exception to be thrown
+     * @since 2.12.0
      */
-    public BrokenReader(final IOException exception) {
-        this.exception = exception;
-    }
+    public static final BrokenReader INSTANCE = new BrokenReader();
 
     /**
-     * Creates a new reader that always throws an {@link IOException}
+     * A supplier for the exception that is thrown by all methods of this class.
+     */
+    private final Supplier<Throwable> exceptionSupplier;
+
+    /**
+     * Constructs a new reader that always throws an {@link IOException}.
      */
     public BrokenReader() {
-        this(new IOException("Broken reader"));
+        this(() -> new IOException("Broken reader"));
     }
 
     /**
-     * Throws the configured exception.
+     * Constructs a new reader that always throws the given exception.
      *
-     * @param cbuf ignored
-     * @param off ignored
-     * @param len ignored
-     * @return nothing
-     * @throws IOException always thrown
+     * @param exception the exception to be thrown.
+     * @deprecated Use {@link #BrokenReader(Throwable)}.
      */
-    @Override
-    public int read(final char[] cbuf, final int off, final int len) throws IOException {
-        throw exception;
+    @Deprecated
+    public BrokenReader(final IOException exception) {
+        this(() -> exception);
     }
 
     /**
-     * Throws the configured exception.
+     * Constructs a new reader that always throws the supplied exception.
      *
-     * @param n ignored
-     * @return nothing
-     * @throws IOException always thrown
+     * @param exceptionSupplier a supplier for the IOException or RuntimeException to be thrown.
+     * @since 2.12.0
      */
-    @Override
-    public long skip(final long n) throws IOException {
-        throw exception;
+    public BrokenReader(final Supplier<Throwable> exceptionSupplier) {
+        this.exceptionSupplier = exceptionSupplier;
     }
 
     /**
-     * Throws the configured exception.
+     * Constructs a new reader that always throws the given exception.
      *
-     * @return nothing
-     * @throws IOException always thrown
+     * @param exception the exception to be thrown.
+     * @since 2.16.0
      */
-    @Override
-    public boolean ready() throws IOException {
-        throw exception;
+    public BrokenReader(final Throwable exception) {
+        this(() -> exception);
     }
 
     /**
      * Throws the configured exception.
      *
-     * @param readAheadLimit ignored
-     * @throws IOException always thrown
-     */
-    @Override
-    public void mark(final int readAheadLimit) throws IOException {
-        throw exception;
-    }
-
-    /**
-     * Throws the configured exception.
-     *
-     * @throws IOException always thrown
-     */
-    @Override
-    public synchronized void reset() throws IOException {
-        throw exception;
-    }
-
-    /**
-     * Throws the configured exception.
-     *
-     * @throws IOException always thrown
+     * @throws IOException always throws the exception configured in a constructor.
      */
     @Override
     public void close() throws IOException {
-        throw exception;
+        throw rethrow();
+    }
+
+    /**
+     * Throws the configured exception.
+     *
+     * @param readAheadLimit ignored.
+     * @throws IOException always throws the exception configured in a constructor.
+     */
+    @Override
+    public void mark(final int readAheadLimit) throws IOException {
+        throw rethrow();
+    }
+
+    /**
+     * Throws the configured exception.
+     *
+     * @param cbuf ignored.
+     * @param off  ignored.
+     * @param len  ignored.
+     * @return nothing.
+     * @throws IOException always throws the exception configured in a constructor.
+     */
+    @Override
+    public int read(final char[] cbuf, final int off, final int len) throws IOException {
+        throw rethrow();
+    }
+
+    /**
+     * Throws the configured exception.
+     *
+     * @return nothing.
+     * @throws IOException always throws the exception configured in a constructor.
+     */
+    @Override
+    public boolean ready() throws IOException {
+        throw rethrow();
+    }
+
+    /**
+     * Throws the configured exception.
+     *
+     * @throws IOException always throws the exception configured in a constructor.
+     */
+    @Override
+    public void reset() throws IOException {
+        throw rethrow();
+    }
+
+    /**
+     * Throws the configured exception from its supplier.
+     *
+     * @return Throws the configured exception from its supplier.
+     */
+    private RuntimeException rethrow() {
+        return Erase.rethrow(exceptionSupplier.get());
+    }
+
+    /**
+     * Throws the configured exception.
+     *
+     * @param n ignored.
+     * @return nothing.
+     * @throws IOException always throws the exception configured in a constructor.
+     */
+    @Override
+    public long skip(final long n) throws IOException {
+        throw rethrow();
     }
 
 }

@@ -16,7 +16,6 @@
  */
 package org.apache.commons.io.input;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,11 +28,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-
 /**
  * Test for the SwappedDataInputStream. This also
  * effectively tests the underlying EndianUtils Stream methods.
- *
  */
 
 public class SwappedDataInputStreamTest {
@@ -53,8 +50,8 @@ public class SwappedDataInputStreamTest {
             0x07,
             0x08
         };
-        final ByteArrayInputStream bais = new ByteArrayInputStream( bytes );
-        this.sdis = new SwappedDataInputStream( bais );
+        final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+        this.sdis = new SwappedDataInputStream(bais);
     }
 
     @AfterEach
@@ -62,9 +59,15 @@ public class SwappedDataInputStreamTest {
         this.sdis = null;
     }
 
+    @SuppressWarnings({ "resource" })
+    @Test
+    public void testCloseHandleIOException() throws IOException {
+        ProxyInputStreamTest.testCloseHandleIOException(new SwappedDataInputStream(new BrokenInputStream((Throwable) new IOException())));
+    }
+
     @Test
     public void testReadBoolean() throws IOException {
-        bytes = new byte[] {0x00, 0x01, 0x02,};
+        bytes = new byte[] { 0x00, 0x01, 0x02, };
         try (
             final ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
             final SwappedDataInputStream sdis = new SwappedDataInputStream(bais)
@@ -99,8 +102,8 @@ public class SwappedDataInputStreamTest {
     public void testReadFully() throws IOException {
         final byte[] bytesIn = new byte[8];
         this.sdis.readFully(bytesIn);
-        for( int i=0; i<8; i++) {
-            assertEquals( bytes[i], bytesIn[i] );
+        for (int i = 0; i < 8; i++) {
+            assertEquals(bytes[i], bytesIn[i]);
         }
     }
 
@@ -137,8 +140,7 @@ public class SwappedDataInputStreamTest {
 
     @Test
     public void testReadUTF() {
-        assertThrows(UnsupportedOperationException.class, () ->  this.sdis.readUTF(),
-                "readUTF should be unsupported. ");
+        assertThrows(UnsupportedOperationException.class, () -> this.sdis.readUTF(), "readUTF should be unsupported. ");
     }
 
     @Test

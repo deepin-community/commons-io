@@ -1,3 +1,39 @@
+commons-io (2.17.0-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- Emmanuel Bourg <ebourg@apache.org>  Wed, 23 Oct 2024 18:25:48 +0200
+
+commons-io (2.16.1-1) unstable; urgency=medium
+
+  * Team upload
+  * New upstream version 2.16.1
+
+ -- tony mancill <tmancill@debian.org>  Thu, 25 Apr 2024 21:05:05 -0700
+
+commons-io (2.16.0-1) unstable; urgency=medium
+
+  * New upstream release
+  * Removed the -java-doc package
+  * Standards-Version updated to 4.7.0
+
+ -- Emmanuel Bourg <ebourg@apache.org>  Mon, 08 Apr 2024 13:01:21 +0200
+
+commons-io (2.15.1-1) experimental; urgency=medium
+
+  * Team upload to experimental.
+  * New upstream version 2.15.1
+  * Remove remove-junit-bom-dependency.patch
+  * Update Homepage and Source URLs
+  * Bump Standards-Version to 4.6.2
+  * Set Rules-Requires-Root: no in debian/control
+  * Ignore spotbugs-maven-plugin
+  * Ignore org.apache.maven.plugins:maven-pmd-plugin
+  * Ignore net.bytebuddy:byte-buddy and byte-buddy-agent (used by tests)
+  * Update debian/watch
+
+ -- tony mancill <tmancill@debian.org>  Sun, 25 Feb 2024 15:54:51 -0800
+
 commons-io (2.11.0-2) unstable; urgency=medium
 
   * Team upload.

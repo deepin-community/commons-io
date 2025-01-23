@@ -28,10 +28,10 @@ import org.apache.commons.io.output.ProxyWriter;
 public class ThrowOnCloseWriter extends ProxyWriter {
 
     /**
-     * Default ctor.
+     * Default constructor.
      */
     public ThrowOnCloseWriter() {
-        super(NullWriter.NULL_WRITER);
+        super(NullWriter.INSTANCE);
     }
 
     /**

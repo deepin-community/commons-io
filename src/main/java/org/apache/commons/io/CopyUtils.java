@@ -31,9 +31,9 @@ import java.nio.charset.Charset;
 
 /**
  * This class provides static utility methods for buffered
- * copying between sources ({@code InputStream}, {@code Reader},
- * {@code String} and {@code byte[]}) and destinations
- * ({@code OutputStream}, {@code Writer}, {@code String} and
+ * copying between sources ({@link InputStream}, {@link Reader},
+ * {@link String} and {@code byte[]}) and destinations
+ * ({@link OutputStream}, {@link Writer}, {@link String} and
  * {@code byte[]}).
  * <p>
  * Unless otherwise noted, these {@code copy} methods do <em>not</em>
@@ -68,7 +68,7 @@ import java.nio.charset.Charset;
  * Imagine that an InputStream's read() is a very expensive operation, which
  * would usually suggest wrapping in a BufferedInputStream. The
  * BufferedInputStream works by issuing infrequent
- * {@link java.io.InputStream#read(byte[] b, int off, int len)} requests on the
+ * {@link InputStream#read(byte[] b, int off, int len)} requests on the
  * underlying InputStream, to fill an internal buffer, from which further
  * {@code read} requests can inexpensively get their data (until the buffer
  * runs out).
@@ -103,7 +103,7 @@ import java.nio.charset.Charset;
  * method variants to specify the encoding, each row may
  * correspond to up to 2 methods.
  * <p>
- * Origin of code: Excalibur.
+ * Provenance: Excalibur.
  *
  * @deprecated Use IOUtils. Will be removed in 3.0.
  *  Methods renamed to IOUtils.write() or IOUtils.copy().
@@ -114,14 +114,9 @@ import java.nio.charset.Charset;
 public class CopyUtils {
 
     /**
-     * Instances should NOT be constructed in standard programming.
-     */
-    public CopyUtils() { }
-
-    /**
-     * Copies bytes from a {@code byte[]} to an {@code OutputStream}.
+     * Copies bytes from a {@code byte[]} to an {@link OutputStream}.
      * @param input the byte array to read from
-     * @param output the {@code OutputStream} to write to
+     * @param output the {@link OutputStream} to write to
      * @throws IOException In case of an I/O problem
      */
     public static void copy(final byte[] input, final OutputStream output) throws IOException {
@@ -130,12 +125,13 @@ public class CopyUtils {
 
     /**
      * Copies and convert bytes from a {@code byte[]} to chars on a
-     * {@code Writer}.
+     * {@link Writer}.
      * The platform's default encoding is used for the byte-to-char conversion.
+     *
      * @param input the byte array to read from
-     * @param output the {@code Writer} to write to
+     * @param output the {@link Writer} to write to
      * @throws IOException In case of an I/O problem
-     * @deprecated 2.5 use {@link #copy(byte[], Writer, String)} instead
+     * @deprecated Use {@link #copy(byte[], Writer, String)} instead
      */
     @Deprecated
     public static void copy(final byte[] input, final Writer output) throws IOException {
@@ -145,9 +141,10 @@ public class CopyUtils {
 
     /**
      * Copies and convert bytes from a {@code byte[]} to chars on a
-     * {@code Writer}, using the specified encoding.
+     * {@link Writer}, using the specified encoding.
+     *
      * @param input the byte array to read from
-     * @param output the {@code Writer} to write to
+     * @param output the {@link Writer} to write to
      * @param encoding The name of a supported character encoding. See the
      * <a href="http://www.iana.org/assignments/character-sets">IANA
      * Charset Registry</a> for a list of valid encoding types.
@@ -159,10 +156,11 @@ public class CopyUtils {
     }
 
     /**
-     * Copies bytes from an {@code InputStream} to an
-     * {@code OutputStream}.
-     * @param input the {@code InputStream} to read from
-     * @param output the {@code OutputStream} to write to
+     * Copies bytes from an {@link InputStream} to an
+     * {@link OutputStream}.
+     *
+     * @param input the {@link InputStream} to read from
+     * @param output the {@link OutputStream} to write to
      * @return the number of bytes copied
      * @throws IOException In case of an I/O problem
      */
@@ -177,43 +175,15 @@ public class CopyUtils {
         return count;
     }
 
-    // ----------------------------------------------------------------
-    // Reader -> Writer
-    // ----------------------------------------------------------------
-
     /**
-     * Copies chars from a {@code Reader} to a {@code Writer}.
-     * @param input the {@code Reader} to read from
-     * @param output the {@code Writer} to write to
-     * @return the number of characters copied
-     * @throws IOException In case of an I/O problem
-     */
-    public static int copy(
-            final Reader input,
-            final Writer output)
-                throws IOException {
-        final char[] buffer = IOUtils.getCharArray();
-        int count = 0;
-        int n;
-        while (EOF != (n = input.read(buffer))) {
-            output.write(buffer, 0, n);
-            count += n;
-        }
-        return count;
-    }
-
-    // ----------------------------------------------------------------
-    // InputStream -> Writer
-    // ----------------------------------------------------------------
-
-    /**
-     * Copies and convert bytes from an {@code InputStream} to chars on a
-     * {@code Writer}.
+     * Copies and convert bytes from an {@link InputStream} to chars on a
+     * {@link Writer}.
      * The platform's default encoding is used for the byte-to-char conversion.
-     * @param input the {@code InputStream} to read from
-     * @param output the {@code Writer} to write to
+     *
+     * @param input the {@link InputStream} to read from
+     * @param output the {@link Writer} to write to
      * @throws IOException In case of an I/O problem
-     * @deprecated 2.5 use {@link #copy(InputStream, Writer, String)} instead
+     * @deprecated Use {@link #copy(InputStream, Writer, String)} instead
      */
     @Deprecated
     public static void copy(
@@ -226,10 +196,11 @@ public class CopyUtils {
     }
 
     /**
-     * Copies and convert bytes from an {@code InputStream} to chars on a
-     * {@code Writer}, using the specified encoding.
-     * @param input the {@code InputStream} to read from
-     * @param output the {@code Writer} to write to
+     * Copies and convert bytes from an {@link InputStream} to chars on a
+     * {@link Writer}, using the specified encoding.
+     *
+     * @param input the {@link InputStream} to read from
+     * @param output the {@link Writer} to write to
      * @param encoding The name of a supported character encoding. See the
      * <a href="http://www.iana.org/assignments/character-sets">IANA
      * Charset Registry</a> for a list of valid encoding types.
@@ -244,19 +215,15 @@ public class CopyUtils {
         copy(in, output);
     }
 
-
-    // ----------------------------------------------------------------
-    // Reader -> OutputStream
-    // ----------------------------------------------------------------
-
     /**
-     * Serialize chars from a {@code Reader} to bytes on an
-     * {@code OutputStream}, and flush the {@code OutputStream}.
+     * Serialize chars from a {@link Reader} to bytes on an
+     * {@link OutputStream}, and flush the {@link OutputStream}.
      * Uses the default platform encoding.
-     * @param input the {@code Reader} to read from
-     * @param output the {@code OutputStream} to write to
+     *
+     * @param input the {@link Reader} to read from
+     * @param output the {@link OutputStream} to write to
      * @throws IOException In case of an I/O problem
-     * @deprecated 2.5 use {@link #copy(Reader, OutputStream, String)} instead
+     * @deprecated Use {@link #copy(Reader, OutputStream, String)} instead
      */
     @Deprecated
     public static void copy(
@@ -272,10 +239,11 @@ public class CopyUtils {
     }
 
     /**
-     * Serialize chars from a {@code Reader} to bytes on an
-     * {@code OutputStream}, and flush the {@code OutputStream}.
-     * @param input the {@code Reader} to read from
-     * @param output the {@code OutputStream} to write to
+     * Serialize chars from a {@link Reader} to bytes on an
+     * {@link OutputStream}, and flush the {@link OutputStream}.
+     *
+     * @param input the {@link Reader} to read from
+     * @param output the {@link OutputStream} to write to
      * @param encoding The name of a supported character encoding. See the
      * <a href="http://www.iana.org/assignments/character-sets">IANA
      * Charset Registry</a> for a list of valid encoding types.
@@ -294,19 +262,38 @@ public class CopyUtils {
         out.flush();
     }
 
-    // ----------------------------------------------------------------
-    // String -> OutputStream
-    // ----------------------------------------------------------------
+    /**
+     * Copies chars from a {@link Reader} to a {@link Writer}.
+     *
+     * @param input the {@link Reader} to read from
+     * @param output the {@link Writer} to write to
+     * @return the number of characters copied
+     * @throws IOException In case of an I/O problem
+     */
+    public static int copy(
+            final Reader input,
+            final Writer output)
+                throws IOException {
+        final char[] buffer = IOUtils.getScratchCharArray();
+        int count = 0;
+        int n;
+        while (EOF != (n = input.read(buffer))) {
+            output.write(buffer, 0, n);
+            count += n;
+        }
+        return count;
+    }
 
     /**
-     * Serialize chars from a {@code String} to bytes on an
-     * {@code OutputStream}, and
-     * flush the {@code OutputStream}.
+     * Serialize chars from a {@link String} to bytes on an
+     * {@link OutputStream}, and
+     * flush the {@link OutputStream}.
      * Uses the platform default encoding.
-     * @param input the {@code String} to read from
-     * @param output the {@code OutputStream} to write to
+     *
+     * @param input the {@link String} to read from
+     * @param output the {@link OutputStream} to write to
      * @throws IOException In case of an I/O problem
-     * @deprecated 2.5 use {@link #copy(String, OutputStream, String)} instead
+     * @deprecated Use {@link #copy(String, OutputStream, String)} instead
      */
     @Deprecated
     public static void copy(
@@ -323,11 +310,12 @@ public class CopyUtils {
     }
 
     /**
-     * Serialize chars from a {@code String} to bytes on an
-     * {@code OutputStream}, and
-     * flush the {@code OutputStream}.
-     * @param input the {@code String} to read from
-     * @param output the {@code OutputStream} to write to
+     * Serialize chars from a {@link String} to bytes on an
+     * {@link OutputStream}, and
+     * flush the {@link OutputStream}.
+     *
+     * @param input the {@link String} to read from
+     * @param output the {@link OutputStream} to write to
      * @param encoding The name of a supported character encoding. See the
      * <a href="http://www.iana.org/assignments/character-sets">IANA
      * Charset Registry</a> for a list of valid encoding types.
@@ -347,19 +335,26 @@ public class CopyUtils {
         out.flush();
     }
 
-    // ----------------------------------------------------------------
-    // String -> Writer
-    // ----------------------------------------------------------------
-
     /**
-     * Copies chars from a {@code String} to a {@code Writer}.
-     * @param input the {@code String} to read from
-     * @param output the {@code Writer} to write to
+     * Copies chars from a {@link String} to a {@link Writer}.
+     *
+     * @param input the {@link String} to read from
+     * @param output the {@link Writer} to write to
      * @throws IOException In case of an I/O problem
      */
     public static void copy(final String input, final Writer output)
                 throws IOException {
         output.write(input);
+    }
+
+    /**
+     * Instances should NOT be constructed in standard programming.
+     *
+     * @deprecated TODO Make private in 3.0.
+     */
+    @Deprecated
+    public CopyUtils() {
+        // empty
     }
 
 }

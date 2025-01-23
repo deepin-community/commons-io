@@ -46,18 +46,6 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     }
 
     /**
-     * File system observer started checking event.
-     *
-     * @param observer The file system observer
-     */
-    @Override
-    public void onStart(final FileAlterationObserver observer) {
-        if (clearOnStart) {
-            clear();
-        }
-    }
-
-    /**
      * Clear file collections.
      */
     public void clear() {
@@ -70,7 +58,7 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     }
 
     /**
-     * Return the set of changed directories.
+     * Gets the set of changed directories.
      *
      * @return Directories which have changed
      */
@@ -79,7 +67,7 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     }
 
     /**
-     * Return the set of changed files.
+     * Gets the set of changed files.
      *
      * @return Files which have changed
      */
@@ -88,7 +76,7 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     }
 
     /**
-     * Return the set of created directories.
+     * Gets the set of created directories.
      *
      * @return Directories which have been created
      */
@@ -97,7 +85,7 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     }
 
     /**
-     * Return the set of created files.
+     * Gets the set of created files.
      *
      * @return Files which have been created
      */
@@ -106,7 +94,7 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     }
 
     /**
-     * Return the set of deleted directories.
+     * Gets the set of deleted directories.
      *
      * @return Directories which been deleted
      */
@@ -115,22 +103,12 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     }
 
     /**
-     * Return the set of deleted files.
+     * Gets the set of deleted files.
      *
      * @return Files which been deleted
      */
     public Collection<File> getDeletedFiles() {
         return deletedFiles;
-    }
-
-    /**
-     * Directory created Event.
-     *
-     * @param directory The directory created
-     */
-    @Override
-    public void onDirectoryCreate(final File directory) {
-        createdDirectories.add(directory);
     }
 
     /**
@@ -144,6 +122,16 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     }
 
     /**
+     * Directory created Event.
+     *
+     * @param directory The directory created
+     */
+    @Override
+    public void onDirectoryCreate(final File directory) {
+        createdDirectories.add(directory);
+    }
+
+    /**
      * Directory deleted Event.
      *
      * @param directory The directory deleted
@@ -151,16 +139,6 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     @Override
     public void onDirectoryDelete(final File directory) {
         deletedDirectories.add(directory);
-    }
-
-    /**
-     * File created Event.
-     *
-     * @param file The file created
-     */
-    @Override
-    public void onFileCreate(final File file) {
-        createdFiles.add(file);
     }
 
     /**
@@ -174,6 +152,16 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     }
 
     /**
+     * File created Event.
+     *
+     * @param file The file created
+     */
+    @Override
+    public void onFileCreate(final File file) {
+        createdFiles.add(file);
+    }
+
+    /**
      * File deleted Event.
      *
      * @param file The file deleted
@@ -181,6 +169,18 @@ public class CollectionFileListener implements FileAlterationListener, Serializa
     @Override
     public void onFileDelete(final File file) {
         deletedFiles.add(file);
+    }
+
+    /**
+     * File system observer started checking event.
+     *
+     * @param observer The file system observer
+     */
+    @Override
+    public void onStart(final FileAlterationObserver observer) {
+        if (clearOnStart) {
+            clear();
+        }
     }
 
     /**

@@ -20,9 +20,14 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FilenameFilter;
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * This class turns a Java FileFilter or FilenameFilter into an IO FileFilter.
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.0
  * @see FileFilterUtils#asFileFilter(FileFilter)
@@ -31,34 +36,31 @@ import java.io.Serializable;
 public class DelegateFileFilter extends AbstractFileFilter implements Serializable {
 
     private static final long serialVersionUID = -8723373124984771318L;
+
     /** The File filter */
-    private final FileFilter fileFilter;
+    private transient final FileFilter fileFilter;
     /** The Filename filter */
-    private final FilenameFilter filenameFilter;
+    private transient final FilenameFilter fileNameFilter;
 
     /**
      * Constructs a delegate file filter around an existing FileFilter.
      *
-     * @param filter  the filter to decorate
+     * @param fileFilter  the filter to decorate
      */
-    public DelegateFileFilter(final FileFilter filter) {
-        if (filter == null) {
-            throw new IllegalArgumentException("The FileFilter must not be null");
-        }
-        this.fileFilter = filter;
-        this.filenameFilter = null;
+    public DelegateFileFilter(final FileFilter fileFilter) {
+        Objects.requireNonNull(fileFilter, "filter");
+        this.fileFilter = fileFilter;
+        this.fileNameFilter = null;
     }
 
     /**
      * Constructs a delegate file filter around an existing FilenameFilter.
      *
-     * @param filter  the filter to decorate
+     * @param fileNameFilter  the filter to decorate
      */
-    public DelegateFileFilter(final FilenameFilter filter) {
-        if (filter == null) {
-            throw new IllegalArgumentException("The FilenameFilter must not be null");
-        }
-        this.filenameFilter = filter;
+    public DelegateFileFilter(final FilenameFilter fileNameFilter) {
+        Objects.requireNonNull(fileNameFilter, "filter");
+        this.fileNameFilter = fileNameFilter;
         this.fileFilter = null;
     }
 
@@ -85,8 +87,8 @@ public class DelegateFileFilter extends AbstractFileFilter implements Serializab
      */
     @Override
     public boolean accept(final File dir, final String name) {
-        if (filenameFilter != null) {
-            return filenameFilter.accept(dir, name);
+        if (fileNameFilter != null) {
+            return fileNameFilter.accept(dir, name);
         }
         return super.accept(dir, name);
     }
@@ -98,7 +100,7 @@ public class DelegateFileFilter extends AbstractFileFilter implements Serializab
      */
     @Override
     public String toString() {
-        final String delegate = fileFilter != null ? fileFilter.toString() : filenameFilter.toString();
+        final String delegate = Objects.toString(fileFilter, Objects.toString(fileNameFilter, null));
         return super.toString() + "(" + delegate + ")";
     }
 

@@ -18,27 +18,66 @@ package org.apache.commons.io;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
+import java.util.Objects;
+
+import org.apache.commons.io.output.CloseShieldOutputStream;
 
 /**
  * Dumps data in hexadecimal format.
  * <p>
  * Provides a single function to take an array of bytes and display it
  * in hexadecimal form.
+ * </p>
  * <p>
- * Origin of code: POI.
- *
+ * Provenance: POI.
+ * </p>
  */
 public class HexDump {
 
     /**
-     * Instances should NOT be constructed in standard programming.
+     * The line-separator (initializes to "line.separator" system property).
+     *
+     * @deprecated Use {@link System#lineSeparator()}.
      */
-    public HexDump() {
+    @Deprecated
+    public static final String EOL = System.lineSeparator();
+
+    private static final char[] HEX_CODES =
+            {
+                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                'A', 'B', 'C', 'D', 'E', 'F'
+            };
+
+    private static final int[] SHIFTS =
+            {
+                28, 24, 20, 16, 12, 8, 4, 0
+            };
+
+    /**
+     * Dumps an array of bytes to an Appendable. The output is formatted
+     * for human inspection, with a hexadecimal offset followed by the
+     * hexadecimal values of the next 16 bytes of data and the printable ASCII
+     * characters (if any) that those bytes represent printed per each line
+     * of output.
+     *
+     * @param data  the byte array to be dumped
+     * @param appendable  the Appendable to which the data is to be written
+     *
+     * @throws IOException is thrown if anything goes wrong writing
+     *         the data to appendable
+     * @throws NullPointerException if the output appendable is null
+     *
+     * @since 2.12.0
+     */
+    public static void dump(final byte[] data, final Appendable appendable)
+            throws IOException {
+        dump(data, 0, appendable, 0, data.length);
     }
 
     /**
-     * Dump an array of bytes to an OutputStream. The output is formatted
+     * Dumps an array of bytes to an Appendable. The output is formatted
      * for human inspection, with a hexadecimal offset followed by the
      * hexadecimal values of the next 16 bytes of data and the printable ASCII
      * characters (if any) that those bytes represent printed per each line
@@ -50,41 +89,44 @@ public class HexDump {
      * offset argument should be set to 2048. The offset value printed
      * at the beginning of each line indicates where in that larger entity
      * the first byte on that line is located.
-     * <p>
-     * All bytes between the given index (inclusive) and the end of the
-     * data array are dumped.
+     * </p>
      *
      * @param data  the byte array to be dumped
      * @param offset  offset of the byte array within a larger entity
-     * @param stream  the OutputStream to which the data is to be
-     *               written
+     * @param appendable  the Appendable to which the data is to be written
      * @param index initial index into the byte array
+     * @param length number of bytes to dump from the array
      *
      * @throws IOException is thrown if anything goes wrong writing
-     *         the data to stream
-     * @throws ArrayIndexOutOfBoundsException if the index is
+     *         the data to appendable
+     * @throws ArrayIndexOutOfBoundsException if the index or length is
      *         outside the data array's bounds
-     * @throws IllegalArgumentException if the output stream is null
+     * @throws NullPointerException if the output appendable is null
+     *
+     * @since 2.12.0
      */
-
     public static void dump(final byte[] data, final long offset,
-                            final OutputStream stream, final int index)
-            throws IOException, ArrayIndexOutOfBoundsException,
-            IllegalArgumentException {
-
+                            final Appendable appendable, final int index,
+                            final int length)
+            throws IOException, ArrayIndexOutOfBoundsException {
+        Objects.requireNonNull(appendable, "appendable");
         if (index < 0 || index >= data.length) {
             throw new ArrayIndexOutOfBoundsException(
                     "illegal index: " + index + " into array of length "
                     + data.length);
         }
-        if (stream == null) {
-            throw new IllegalArgumentException("cannot write to nullstream");
-        }
         long display_offset = offset + index;
         final StringBuilder buffer = new StringBuilder(74);
 
-        for (int j = index; j < data.length; j += 16) {
-            int chars_read = data.length - j;
+        // TODO Use Objects.checkFromIndexSize(index, length, data.length) when upgrading to JDK9
+        if (length < 0 || index + length > data.length) {
+            throw new ArrayIndexOutOfBoundsException(String.format("Range [%s, %<s + %s) out of bounds for length %s", index, length, data.length));
+        }
+
+        final int endIndex = index + length;
+
+        for (int j = index; j < endIndex; j += 16) {
+            int chars_read = endIndex - j;
 
             if (chars_read > 16) {
                 chars_read = 16;
@@ -105,57 +147,87 @@ public class HexDump {
                     buffer.append('.');
                 }
             }
-            buffer.append(EOL);
-            // make explicit the dependency on the default encoding
-            stream.write(buffer.toString().getBytes(Charset.defaultCharset()));
-            stream.flush();
+            buffer.append(System.lineSeparator());
+            appendable.append(buffer);
             buffer.setLength(0);
             display_offset += chars_read;
         }
     }
 
     /**
-     * The line-separator (initializes to "line.separator" system property.
-     */
-    public static final String EOL =
-            System.getProperty("line.separator");
-    private static final char[] _hexcodes =
-            {
-                '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                'A', 'B', 'C', 'D', 'E', 'F'
-            };
-    private static final int[] _shifts =
-            {
-                28, 24, 20, 16, 12, 8, 4, 0
-            };
-
-    /**
-     * Dump a long value into a StringBuilder.
+     * Dumps an array of bytes to an OutputStream. The output is formatted
+     * for human inspection, with a hexadecimal offset followed by the
+     * hexadecimal values of the next 16 bytes of data and the printable ASCII
+     * characters (if any) that those bytes represent printed per each line
+     * of output.
+     * <p>
+     * The offset argument specifies the start offset of the data array
+     * within a larger entity like a file or an incoming stream. For example,
+     * if the data array contains the third kibibyte of a file, then the
+     * offset argument should be set to 2048. The offset value printed
+     * at the beginning of each line indicates where in that larger entity
+     * the first byte on that line is located.
+     * </p>
+     * <p>
+     * All bytes between the given index (inclusive) and the end of the
+     * data array are dumped.
+     * </p>
      *
-     * @param _lbuffer the StringBuilder to dump the value in
-     * @param value  the long value to be dumped
-     * @return StringBuilder containing the dumped value.
+     * @param data  the byte array to be dumped
+     * @param offset  offset of the byte array within a larger entity
+     * @param stream  the OutputStream to which the data is to be
+     *               written
+     * @param index initial index into the byte array
+     *
+     * @throws IOException is thrown if anything goes wrong writing
+     *         the data to stream
+     * @throws ArrayIndexOutOfBoundsException if the index is
+     *         outside the data array's bounds
+     * @throws NullPointerException if the output stream is null
      */
-    private static StringBuilder dump(final StringBuilder _lbuffer, final long value) {
-        for (int j = 0; j < 8; j++) {
-            _lbuffer
-                    .append(_hexcodes[(int) (value >> _shifts[j]) & 15]);
+    @SuppressWarnings("resource") // Caller closes stream
+    public static void dump(final byte[] data, final long offset,
+                            final OutputStream stream, final int index)
+            throws IOException, ArrayIndexOutOfBoundsException {
+        Objects.requireNonNull(stream, "stream");
+
+        try (OutputStreamWriter out = new OutputStreamWriter(CloseShieldOutputStream.wrap(stream), Charset.defaultCharset())) {
+            dump(data, offset, out, index, data.length - index);
         }
-        return _lbuffer;
     }
 
     /**
-     * Dump a byte value into a StringBuilder.
+     * Dumps a byte value into a StringBuilder.
      *
-     * @param _cbuffer the StringBuilder to dump the value in
+     * @param builder the StringBuilder to dump the value in
      * @param value  the byte value to be dumped
      * @return StringBuilder containing the dumped value.
      */
-    private static StringBuilder dump(final StringBuilder _cbuffer, final byte value) {
+    private static StringBuilder dump(final StringBuilder builder, final byte value) {
         for (int j = 0; j < 2; j++) {
-            _cbuffer.append(_hexcodes[value >> _shifts[j + 6] & 15]);
+            builder.append(HEX_CODES[value >> SHIFTS[j + 6] & 15]);
         }
-        return _cbuffer;
+        return builder;
+    }
+
+    /**
+     * Dumps a long value into a StringBuilder.
+     *
+     * @param builder the StringBuilder to dump the value in
+     * @param value  the long value to be dumped
+     * @return StringBuilder containing the dumped value.
+     */
+    private static StringBuilder dump(final StringBuilder builder, final long value) {
+        for (int j = 0; j < 8; j++) {
+            builder.append(HEX_CODES[(int) (value >> SHIFTS[j]) & 15]);
+        }
+        return builder;
+    }
+
+    /**
+     * Instances should NOT be constructed in standard programming.
+     */
+    public HexDump() {
     }
 
 }

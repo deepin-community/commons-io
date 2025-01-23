@@ -17,11 +17,11 @@
 package org.apache.commons.io.filefilter;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Instant;
 import java.util.Date;
 
 import org.apache.commons.io.FileUtils;
@@ -34,9 +34,9 @@ import org.apache.commons.io.file.PathUtils;
  * </p>
  * <h2>Using Classic IO</h2>
  * <pre>
- * Path dir = Paths.get("");
+ * Path dir = PathUtils.current();
  * // We are interested in files older than one day
- * long cutoff = System.currentTimeMillis() - (24 * 60 * 60 * 1000);
+ * Instant cutoff = Instant.now().minus(Duration.ofDays(1));
  * String[] files = dir.list(new AgeFileFilter(cutoff));
  * for (String file : files) {
  *     System.out.println(file);
@@ -45,9 +45,9 @@ import org.apache.commons.io.file.PathUtils;
  *
  * <h2>Using NIO</h2>
  * <pre>
- * Path dir = Paths.get("");
+ * Path dir = PathUtils.current();
  * // We are interested in files older than one day
- * long cutoff = System.currentTimeMillis() - (24 * 60 * 60 * 1000);
+ * Instant cutoff = Instant.now().minus(Duration.ofDays(1));
  * AccumulatorPathVisitor visitor = AccumulatorPathVisitor.withLongCounters(new AgeFileFilter(cutoff));
  * //
  * // Walk one dir
@@ -63,6 +63,10 @@ import org.apache.commons.io.file.PathUtils;
  * System.out.println(visitor.getDirList());
  * System.out.println(visitor.getFileList());
  * </pre>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @see FileFilterUtils#ageFileFilter(Date)
  * @see FileFilterUtils#ageFileFilter(File)
@@ -80,7 +84,7 @@ public class AgeFileFilter extends AbstractFileFilter implements Serializable {
     private final boolean acceptOlder;
 
     /** The cutoff time threshold measured in milliseconds since the epoch (00:00:00 GMT, January 1, 1970). */
-    private final long cutoffMillis;
+    private final Instant cutoffInstant;
 
     /**
      * Constructs a new age file filter for files older than (at or before) a certain cutoff date.
@@ -99,7 +103,7 @@ public class AgeFileFilter extends AbstractFileFilter implements Serializable {
      *        cutoff).
      */
     public AgeFileFilter(final Date cutoffDate, final boolean acceptOlder) {
-        this(cutoffDate.getTime(), acceptOlder);
+        this(cutoffDate.toInstant(), acceptOlder);
     }
 
     /**
@@ -125,13 +129,35 @@ public class AgeFileFilter extends AbstractFileFilter implements Serializable {
     }
 
     /**
+     * Constructs a new age file filter for files equal to or older than a certain cutoff.
+     *
+     * @param cutoffInstant The cutoff time threshold since the epoch (00:00:00 GMT, January 1, 1970).
+     * @since 2.12.0
+     */
+    public AgeFileFilter(final Instant cutoffInstant) {
+        this(cutoffInstant, true);
+    }
+
+    /**
+     * Constructs a new age file filter for files on any one side of a certain cutoff.
+     *
+     * @param cutoffInstant The cutoff time threshold since the epoch (00:00:00 GMT, January 1, 1970).
+     * @param acceptOlder if true, older files (at or before the cutoff) are accepted, else newer ones (after the cutoff).
+     * @since 2.12.0
+     */
+    public AgeFileFilter(final Instant cutoffInstant, final boolean acceptOlder) {
+        this.acceptOlder = acceptOlder;
+        this.cutoffInstant = cutoffInstant;
+    }
+
+    /**
      * Constructs a new age file filter for files equal to or older than a certain cutoff
      *
      * @param cutoffMillis The cutoff time threshold measured in milliseconds since the epoch (00:00:00 GMT, January 1,
      *        1970).
      */
     public AgeFileFilter(final long cutoffMillis) {
-        this(cutoffMillis, true);
+        this(Instant.ofEpochMilli(cutoffMillis), true);
     }
 
     /**
@@ -143,8 +169,7 @@ public class AgeFileFilter extends AbstractFileFilter implements Serializable {
      *        cutoff).
      */
     public AgeFileFilter(final long cutoffMillis, final boolean acceptOlder) {
-        this.acceptOlder = acceptOlder;
-        this.cutoffMillis = cutoffMillis;
+        this(Instant.ofEpochMilli(cutoffMillis), acceptOlder);
     }
 
     /**
@@ -159,8 +184,7 @@ public class AgeFileFilter extends AbstractFileFilter implements Serializable {
      */
     @Override
     public boolean accept(final File file) {
-        final boolean newer = FileUtils.isFileNewer(file, cutoffMillis);
-        return acceptOlder != newer;
+        return acceptOlder != FileUtils.isFileNewer(file, cutoffInstant);
     }
 
     /**
@@ -176,13 +200,7 @@ public class AgeFileFilter extends AbstractFileFilter implements Serializable {
      */
     @Override
     public FileVisitResult accept(final Path file, final BasicFileAttributes attributes) {
-        final boolean newer;
-        try {
-            newer = PathUtils.isNewer(file, cutoffMillis);
-        } catch (final IOException e) {
-            return handle(e);
-        }
-        return toFileVisitResult(acceptOlder != newer, file);
+        return get(() -> toFileVisitResult(acceptOlder != PathUtils.isNewer(file, cutoffInstant)));
     }
 
     /**
@@ -193,6 +211,6 @@ public class AgeFileFilter extends AbstractFileFilter implements Serializable {
     @Override
     public String toString() {
         final String condition = acceptOlder ? "<=" : ">";
-        return super.toString() + "(" + condition + cutoffMillis + ")";
+        return super.toString() + "(" + condition + cutoffInstant + ")";
     }
 }

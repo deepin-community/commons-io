@@ -20,8 +20,6 @@ package org.apache.commons.io.file;
 import static org.apache.commons.io.file.CounterAssertions.assertCounts;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.apache.commons.io.file.Counters.PathCounters;
@@ -37,12 +35,9 @@ public class PathUtilsCountingTest {
      */
     @Test
     public void testCountEmptyFolder() throws IOException {
-        final Path tempDir = Files.createTempDirectory(getClass().getCanonicalName());
-        try {
-            final PathCounters pathCounts = PathUtils.countDirectory(tempDir);
+        try (TempDirectory tempDir = TempDirectory.create(getClass().getCanonicalName())) {
+            final PathCounters pathCounts = PathUtils.countDirectory(tempDir.get());
             assertCounts(1, 0, 0, pathCounts);
-        } finally {
-            Files.deleteIfExists(tempDir);
         }
     }
 
@@ -74,5 +69,15 @@ public class PathUtilsCountingTest {
         final PathCounters pathCounts = PathUtils
                 .countDirectory(Paths.get("src/test/resources/org/apache/commons/io/dirs-2-file-size-2"));
         assertCounts(3, 2, 2, pathCounts);
+    }
+
+    /**
+     * Tests a directory with two subdirectories, each containing one file of size 2.
+     */
+    @Test
+    public void testCountFolders2FileSize4() throws IOException {
+        final PathCounters pathCounts = PathUtils
+                .countDirectory(Paths.get("src/test/resources/org/apache/commons/io/dirs-2-file-size-4"));
+        assertCounts(3, 4, 8, pathCounts);
     }
 }

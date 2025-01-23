@@ -16,9 +16,9 @@
  */
 package org.apache.commons.io.input.compatibility;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
+import org.apache.commons.io.input.CharSequenceInputStream;
 import org.apache.commons.io.input.XmlStreamReaderUtilitiesTest;
 
 /**
@@ -26,17 +26,16 @@ import org.apache.commons.io.input.XmlStreamReaderUtilitiesTest;
  */
 public class XmlStreamReaderUtilitiesCompatibilityTest extends XmlStreamReaderUtilitiesTest {
 
-    @Override
-    protected String calculateRawEncoding(final String bomEnc, final String xmlGuessEnc, final String xmlEnc,
-            final String defaultEncoding) throws IOException {
-        try (final MockXmlStreamReader mock = new MockXmlStreamReader(defaultEncoding)) {
-            return mock.calculateRawEncoding(bomEnc, xmlGuessEnc, xmlEnc, null);
+    /** Mock {@link XmlStreamReader} implementation */
+    private static final class MockXmlStreamReader extends XmlStreamReader {
+        MockXmlStreamReader(final String defaultEncoding) throws IOException {
+            super(CharSequenceInputStream.builder().setCharSequence("").get(), null, true, defaultEncoding);
         }
     }
     @Override
     protected String calculateHttpEncoding(final String httpContentType, final String bomEnc, final String xmlGuessEnc,
             final String xmlEnc, final boolean lenient, final String defaultEncoding) throws IOException {
-        try (final MockXmlStreamReader mock = new MockXmlStreamReader(defaultEncoding)) {
+        try (MockXmlStreamReader mock = new MockXmlStreamReader(defaultEncoding)) {
                 return mock.calculateHttpEncoding(
                         XmlStreamReader.getContentTypeMime(httpContentType),
                         XmlStreamReader.getContentTypeEncoding(httpContentType),
@@ -44,10 +43,11 @@ public class XmlStreamReaderUtilitiesCompatibilityTest extends XmlStreamReaderUt
         }
     }
 
-    /** Mock {@link XmlStreamReader} implementation */
-    private static class MockXmlStreamReader extends XmlStreamReader {
-        MockXmlStreamReader(final String defaultEncoding) throws IOException {
-            super(new ByteArrayInputStream("".getBytes()), null, true, defaultEncoding);
+    @Override
+    protected String calculateRawEncoding(final String bomEnc, final String xmlGuessEnc, final String xmlEnc,
+            final String defaultEncoding) throws IOException {
+        try (MockXmlStreamReader mock = new MockXmlStreamReader(defaultEncoding)) {
+            return mock.calculateRawEncoding(bomEnc, xmlGuessEnc, xmlEnc, null);
         }
     }
 }

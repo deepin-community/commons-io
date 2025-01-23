@@ -30,15 +30,15 @@ public class MockSerializedClass implements Serializable {
     }
 
     @Override
-    public int hashCode() {
-        return str.hashCode();
+    public boolean equals(final Object obj) {
+        if (!(obj instanceof MockSerializedClass)) {
+            return false;
+        }
+        return str.equals(((MockSerializedClass) obj).str);
     }
 
     @Override
-    public boolean equals(final Object obj) {
-        if(!(obj instanceof MockSerializedClass)) {
-            return false;
-        }
-        return str.equals(((MockSerializedClass)obj).str);
+    public int hashCode() {
+        return str.hashCode();
     }
 }

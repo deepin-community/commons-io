@@ -24,13 +24,21 @@ import java.util.Set;
 
 /**
  * Extends {@link Selector} with no-ops for testing.
- *
  */
 public class SelectorAdapter extends Selector {
 
     @Override
+    public void close() throws IOException {
+    }
+
+    @Override
     public boolean isOpen() {
         return false;
+    }
+
+    @Override
+    public Set<SelectionKey> keys() {
+        return null;
     }
 
     @Override
@@ -39,8 +47,13 @@ public class SelectorAdapter extends Selector {
     }
 
     @Override
-    public Set<SelectionKey> keys() {
-        return null;
+    public int select() throws IOException {
+        return 0;
+    }
+
+    @Override
+    public int select(final long timeout) throws IOException {
+        return 0;
     }
 
     @Override
@@ -54,22 +67,8 @@ public class SelectorAdapter extends Selector {
     }
 
     @Override
-    public int select(final long timeout) throws IOException {
-        return 0;
-    }
-
-    @Override
-    public int select() throws IOException {
-        return 0;
-    }
-
-    @Override
     public Selector wakeup() {
         return null;
-    }
-
-    @Override
-    public void close() throws IOException {
     }
 
 }

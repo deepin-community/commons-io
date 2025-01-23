@@ -29,22 +29,85 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.io.Charsets;
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.FileSystem;
 import org.apache.commons.io.StandardLineSeparator;
+import org.apache.commons.io.build.AbstractStreamBuilder;
 
 /**
- * Reads lines in a file reversely (similar to a BufferedReader, but starting at
- * the last line). Useful for e.g. searching in log files.
+ * Reads lines in a file reversely (similar to a BufferedReader, but starting at the last line). Useful for e.g. searching in log files.
+ * <p>
+ * To build an instance, use {@link Builder}.
+ * </p>
  *
+ * @see Builder
  * @since 2.2
  */
 public class ReversedLinesFileReader implements Closeable {
 
-    private class FilePart {
+    // @formatter:off
+    /**
+     * Builds a new {@link ReversedLinesFileReader}.
+     *
+     * <p>
+     * For example:
+     * </p>
+     * <pre>{@code
+     * ReversedLinesFileReader r = ReversedLinesFileReader.builder()
+     *   .setPath(path)
+     *   .setBufferSize(4096)
+     *   .setCharset(StandardCharsets.UTF_8)
+     *   .get();}
+     * </pre>
+     *
+     * @see #get()
+     * @since 2.12.0
+     */
+    // @formatter:on
+    public static class Builder extends AbstractStreamBuilder<ReversedLinesFileReader, Builder> {
+
+        /**
+         * Constructs a new {@link Builder}.
+         */
+        public Builder() {
+            setBufferSizeDefault(DEFAULT_BLOCK_SIZE);
+            setBufferSize(DEFAULT_BLOCK_SIZE);
+        }
+
+        /**
+         * Builds a new {@link ReversedLinesFileReader}.
+         * <p>
+         * You must set input that supports {@link #getInputStream()} on this builder, otherwise, this method throws an exception.
+         * </p>
+         * <p>
+         * This builder use the following aspects:
+         * </p>
+         * <ul>
+         * <li>{@link #getInputStream()}</li>
+         * <li>{@link #getBufferSize()}</li>
+         * <li>{@link #getCharset()}</li>
+         * </ul>
+         *
+         * @return a new instance.
+         * @throws IllegalStateException         if the {@code origin} is {@code null}.
+         * @throws UnsupportedOperationException if the origin cannot be converted to a {@link Path}.
+         * @throws IOException                   if an I/O error occurs.
+         * @see #getPath()
+         * @see #getBufferSize()
+         * @see #getCharset()
+         */
+        @Override
+        public ReversedLinesFileReader get() throws IOException {
+            return new ReversedLinesFileReader(getPath(), getBufferSize(), getCharset());
+        }
+
+    }
+
+    private final class FilePart {
         private final long no;
 
         private final byte[] data;
@@ -54,7 +117,7 @@ public class ReversedLinesFileReader implements Closeable {
         private int currentLastBytePos;
 
         /**
-         * ctor
+         * Constructs a new instance.
          *
          * @param no                     the part number
          * @param length                 its length
@@ -84,14 +147,13 @@ public class ReversedLinesFileReader implements Closeable {
         }
 
         /**
-         * Creates the buffer containing any left over bytes.
+         * Constructs the buffer containing any leftover bytes.
          */
         private void createLeftOver() {
             final int lineLengthBytes = currentLastBytePos + 1;
             if (lineLengthBytes > 0) {
                 // create left over for next block
-                leftOver = IOUtils.byteArray(lineLengthBytes);
-                System.arraycopy(data, 0, leftOver, 0, lineLengthBytes);
+                leftOver = Arrays.copyOf(data, lineLengthBytes);
             } else {
                 leftOver = null;
             }
@@ -124,7 +186,7 @@ public class ReversedLinesFileReader implements Closeable {
          *
          * @return the line or null
          */
-        private String readLine() {
+        private String readLine() { //NOPMD Bug in PMD
 
             String line = null;
             int newLineMatchByteCount;
@@ -141,7 +203,7 @@ public class ReversedLinesFileReader implements Closeable {
                     break; // skip last few bytes and leave it to the next file part
                 }
 
-                // --- check for newline ---
+                // check for newline
                 if ((newLineMatchByteCount = getNewLineMatchByteCount(data, i)) > 0 /* found newline */) {
                     final int lineStart = i + 1;
                     final int lineLengthBytes = currentLastBytePos - lineStart + 1;
@@ -149,8 +211,7 @@ public class ReversedLinesFileReader implements Closeable {
                     if (lineLengthBytes < 0) {
                         throw new IllegalStateException("Unexpected negative line length=" + lineLengthBytes);
                     }
-                    final byte[] lineData = IOUtils.byteArray(lineLengthBytes);
-                    System.arraycopy(data, lineStart, lineData, 0, lineLengthBytes);
+                    final byte[] lineData = Arrays.copyOfRange(data, lineStart, lineStart + lineLengthBytes);
 
                     line = new String(lineData, charset);
 
@@ -158,17 +219,17 @@ public class ReversedLinesFileReader implements Closeable {
                     break; // found line
                 }
 
-                // --- move cursor ---
+                // move cursor
                 i -= byteDecrement;
 
-                // --- end of file part handling ---
+                // end of file part handling
                 if (i < 0) {
                     createLeftOver();
                     break; // end of file part
                 }
             }
 
-            // --- last file part handling ---
+            // last file part handling
             if (isLastFilePart && leftOver != null) {
                 // there will be no line break anymore, this is the first line of the file
                 line = new String(leftOver, charset);
@@ -204,7 +265,18 @@ public class ReversedLinesFileReader implements Closeable {
     }
 
     private static final String EMPTY_STRING = "";
-    private static final int DEFAULT_BLOCK_SIZE = IOUtils.DEFAULT_BUFFER_SIZE;
+
+    private static final int DEFAULT_BLOCK_SIZE = FileSystem.getCurrent().getBlockSize();
+
+    /**
+     * Constructs a new {@link Builder}.
+     *
+     * @return a new {@link Builder}.
+     * @since 2.12.0
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
 
     private final int blockSize;
     private final Charset charset;
@@ -218,12 +290,12 @@ public class ReversedLinesFileReader implements Closeable {
     private boolean trailingNewlineOfFileSkipped;
 
     /**
-     * Creates a ReversedLinesFileReader with default block size of 4KB and the
+     * Constructs a ReversedLinesFileReader with default block size of 4KB and the
      * platform's default encoding.
      *
      * @param file the file to be read
      * @throws IOException if an I/O error occurs.
-     * @deprecated 2.5 use {@link #ReversedLinesFileReader(File, Charset)} instead
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
     @Deprecated
     public ReversedLinesFileReader(final File file) throws IOException {
@@ -231,20 +303,22 @@ public class ReversedLinesFileReader implements Closeable {
     }
 
     /**
-     * Creates a ReversedLinesFileReader with default block size of 4KB and the
+     * Constructs a ReversedLinesFileReader with default block size of 4KB and the
      * specified encoding.
      *
      * @param file    the file to be read
      * @param charset the charset to use, null uses the default Charset.
      * @throws IOException if an I/O error occurs.
      * @since 2.5
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
+    @Deprecated
     public ReversedLinesFileReader(final File file, final Charset charset) throws IOException {
         this(file.toPath(), charset);
     }
 
     /**
-     * Creates a ReversedLinesFileReader with the given block size and encoding.
+     * Constructs a ReversedLinesFileReader with the given block size and encoding.
      *
      * @param file      the file to be read
      * @param blockSize size of the internal buffer (for ideal performance this
@@ -253,13 +327,15 @@ public class ReversedLinesFileReader implements Closeable {
      * @param charset  the encoding of the file, null uses the default Charset.
      * @throws IOException if an I/O error occurs.
      * @since 2.3
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
+    @Deprecated
     public ReversedLinesFileReader(final File file, final int blockSize, final Charset charset) throws IOException {
         this(file.toPath(), blockSize, charset);
     }
 
     /**
-     * Creates a ReversedLinesFileReader with the given block size and encoding.
+     * Constructs a ReversedLinesFileReader with the given block size and encoding.
      *
      * @param file      the file to be read
      * @param blockSize size of the internal buffer (for ideal performance this
@@ -267,31 +343,31 @@ public class ReversedLinesFileReader implements Closeable {
      *                  system).
      * @param charsetName  the encoding of the file, null uses the default Charset.
      * @throws IOException                                  if an I/O error occurs
-     * @throws java.nio.charset.UnsupportedCharsetException thrown instead of
-     *                                                      {@link UnsupportedEncodingException}
-     *                                                      in version 2.2 if the
-     *                                                      encoding is not
-     *                                                      supported.
+     * @throws java.nio.charset.UnsupportedCharsetException if the encoding is not supported
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
+    @Deprecated
     public ReversedLinesFileReader(final File file, final int blockSize, final String charsetName) throws IOException {
         this(file.toPath(), blockSize, charsetName);
     }
 
     /**
-     * Creates a ReversedLinesFileReader with default block size of 4KB and the
+     * Constructs a ReversedLinesFileReader with default block size of 4KB and the
      * specified encoding.
      *
      * @param file    the file to be read
      * @param charset the charset to use, null uses the default Charset.
      * @throws IOException if an I/O error occurs.
      * @since 2.7
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
+    @Deprecated
     public ReversedLinesFileReader(final Path file, final Charset charset) throws IOException {
         this(file, DEFAULT_BLOCK_SIZE, charset);
     }
 
     /**
-     * Creates a ReversedLinesFileReader with the given block size and encoding.
+     * Constructs a ReversedLinesFileReader with the given block size and encoding.
      *
      * @param file      the file to be read
      * @param blockSize size of the internal buffer (for ideal performance this
@@ -300,7 +376,9 @@ public class ReversedLinesFileReader implements Closeable {
      * @param charset  the encoding of the file, null uses the default Charset.
      * @throws IOException if an I/O error occurs.
      * @since 2.7
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
+    @Deprecated
     public ReversedLinesFileReader(final Path file, final int blockSize, final Charset charset) throws IOException {
         this.blockSize = blockSize;
         this.charset = Charsets.toCharset(charset);
@@ -308,13 +386,8 @@ public class ReversedLinesFileReader implements Closeable {
         // --- check & prepare encoding ---
         final CharsetEncoder charsetEncoder = this.charset.newEncoder();
         final float maxBytesPerChar = charsetEncoder.maxBytesPerChar();
-        if (maxBytesPerChar == 1f) {
+        if (maxBytesPerChar == 1f || this.charset == StandardCharsets.UTF_8) {
             // all one byte encodings are no problem
-            byteDecrement = 1;
-        } else if (this.charset == StandardCharsets.UTF_8) {
-            // UTF-8 works fine out of the box, for multibyte sequences a second UTF-8 byte
-            // can never be a newline byte
-            // http://en.wikipedia.org/wiki/UTF-8
             byteDecrement = 1;
         } else if (this.charset == Charset.forName("Shift_JIS") || // Same as for UTF-8
         // http://www.herongyang.com/Unicode/JIS-Shift-JIS-Encoding.html
@@ -363,7 +436,7 @@ public class ReversedLinesFileReader implements Closeable {
     }
 
     /**
-     * Creates a ReversedLinesFileReader with the given block size and encoding.
+     * Constructs a ReversedLinesFileReader with the given block size and encoding.
      *
      * @param file        the file to be read
      * @param blockSize   size of the internal buffer (for ideal performance this
@@ -371,13 +444,11 @@ public class ReversedLinesFileReader implements Closeable {
      *                    system).
      * @param charsetName the encoding of the file, null uses the default Charset.
      * @throws IOException                                  if an I/O error occurs
-     * @throws java.nio.charset.UnsupportedCharsetException thrown instead of
-     *                                                      {@link UnsupportedEncodingException}
-     *                                                      in version 2.2 if the
-     *                                                      encoding is not
-     *                                                      supported.
+     * @throws java.nio.charset.UnsupportedCharsetException if the encoding is not supported
      * @since 2.7
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
+    @Deprecated
     public ReversedLinesFileReader(final Path file, final int blockSize, final String charsetName) throws IOException {
         this(file, blockSize, Charsets.toCharset(charsetName));
     }
@@ -404,7 +475,7 @@ public class ReversedLinesFileReader implements Closeable {
         while (line == null) {
             currentFilePart = currentFilePart.rollOver();
             if (currentFilePart == null) {
-                // no more fileparts: we're done, leave line set to null
+                // no more FileParts: we're done, leave line set to null
                 break;
             }
             line = currentFilePart.readLine();

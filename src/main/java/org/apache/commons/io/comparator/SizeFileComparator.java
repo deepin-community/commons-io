@@ -28,16 +28,19 @@ import org.apache.commons.io.FileUtils;
  * <p>
  * This comparator can be used to sort lists or arrays of files
  * by their length/size.
+ * </p>
  * <p>
  * Example of sorting a list of files using the
  * {@link #SIZE_COMPARATOR} singleton instance:
+ * </p>
  * <pre>
  *       List&lt;File&gt; list = ...
  *       ((AbstractFileComparator) SizeFileComparator.SIZE_COMPARATOR).sort(list);
  * </pre>
  * <p>
- * Example of doing a <i>reverse</i> sort of an array of files using the
+ * Example of doing a <em>reverse</em> sort of an array of files using the
  * {@link #SIZE_REVERSE} singleton instance:
+ * </p>
  * <pre>
  *       File[] array = ...
  *       ((AbstractFileComparator) SizeFileComparator.SIZE_REVERSE).sort(array);
@@ -45,6 +48,11 @@ import org.apache.commons.io.FileUtils;
  * <p>
  * <strong>N.B.</strong> Directories are treated as <b>zero size</b> unless
  * {@code sumDirectoryContents} is {@code true}.
+ * </p>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.4
  */
@@ -74,18 +82,19 @@ public class SizeFileComparator extends AbstractFileComparator implements Serial
     private final boolean sumDirectoryContents;
 
     /**
-     * Construct a file size comparator instance (directories treated as zero size).
+     * Constructs a file size comparator instance (directories treated as zero size).
      */
     public SizeFileComparator() {
         this.sumDirectoryContents = false;
     }
 
     /**
-     * Construct a file size comparator instance specifying whether the size of
+     * Constructs a file size comparator instance specifying whether the size of
      * the directory contents should be aggregated.
      * <p>
      * If the {@code sumDirectoryContents} is {@code true} The size of
      * directories is calculated using  {@link FileUtils#sizeOfDirectory(File)}.
+     * </p>
      *
      * @param sumDirectoryContents {@code true} if the sum of the directories' contents
      *  should be calculated, otherwise {@code false} if directories should be treated
@@ -96,7 +105,7 @@ public class SizeFileComparator extends AbstractFileComparator implements Serial
     }
 
     /**
-     * Compare the length of two files.
+     * Compares the length of two files.
      *
      * @param file1 The first file to compare
      * @param file2 The second file to compare
@@ -104,7 +113,6 @@ public class SizeFileComparator extends AbstractFileComparator implements Serial
      * is less than the second, zero if the lengths are the
      * same and a positive value if the first files length
      * is greater than the second file.
-     *
      */
     @Override
     public int compare(final File file1, final File file2) {

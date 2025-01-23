@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.function.IOConsumer;
 
 /**
  * The {@link ObservableInputStream} allows, that an InputStream may be consumed by other receivers, apart from the
@@ -38,12 +39,12 @@ import org.apache.commons.io.IOUtils;
  * be used.
  * </p>
  *
- * @see MessageDigestCalculatingInputStream
+ * @see MessageDigestInputStream
  */
 public class ObservableInputStream extends ProxyInputStream {
 
     /**
-     * Abstracts observer callback for {@code ObservableInputStream}s.
+     * Abstracts observer callback for {@link ObservableInputStream}s.
      */
     public static abstract class Observer {
 
@@ -109,7 +110,7 @@ public class ObservableInputStream extends ProxyInputStream {
     private final List<Observer> observers;
 
     /**
-     * Creates a new ObservableInputStream for the given InputStream.
+     * Constructs a new ObservableInputStream for the given InputStream.
      *
      * @param inputStream the input stream to observe.
      */
@@ -118,7 +119,7 @@ public class ObservableInputStream extends ProxyInputStream {
     }
 
     /**
-     * Creates a new ObservableInputStream for the given InputStream.
+     * Constructs a new ObservableInputStream for the given InputStream.
      *
      * @param inputStream the input stream to observe.
      * @param observers List of observer callbacks.
@@ -129,7 +130,7 @@ public class ObservableInputStream extends ProxyInputStream {
     }
 
     /**
-     * Creates a new ObservableInputStream for the given InputStream.
+     * Constructs a new ObservableInputStream for the given InputStream.
      *
      * @param inputStream the input stream to observe.
      * @param observers List of observer callbacks.
@@ -169,20 +170,21 @@ public class ObservableInputStream extends ProxyInputStream {
      * @throws IOException The underlying {@link InputStream}, or either of the observers has thrown an exception.
      */
     public void consume() throws IOException {
-        final byte[] buffer = IOUtils.byteArray();
-        while (read(buffer) != EOF) {
-            // empty
-        }
+        IOUtils.consume(this);
+    }
+
+    private void forEachObserver(final IOConsumer<Observer> action) throws IOException {
+        IOConsumer.forAll(action, observers);
     }
 
     /**
-     * Gets all currently registered observers.
+     * Gets a copy of currently registered observers.
      *
-     * @return a list of the currently registered observers.
+     * @return a copy of the list of currently registered observers.
      * @since 2.9.0
      */
     public List<Observer> getObservers() {
-        return observers;
+        return new ArrayList<>(observers);
     }
 
     /**
@@ -191,9 +193,7 @@ public class ObservableInputStream extends ProxyInputStream {
      * @throws IOException Some observer has thrown an exception, which is being passed down.
      */
     protected void noteClosed() throws IOException {
-        for (final Observer observer : getObservers()) {
-            observer.closed();
-        }
+        forEachObserver(Observer::closed);
     }
 
     /**
@@ -203,9 +203,7 @@ public class ObservableInputStream extends ProxyInputStream {
      * @throws IOException Some observer has thrown an exception, which is being passed down.
      */
     protected void noteDataByte(final int value) throws IOException {
-        for (final Observer observer : getObservers()) {
-            observer.data(value);
-        }
+        forEachObserver(observer -> observer.data(value));
     }
 
     /**
@@ -217,9 +215,7 @@ public class ObservableInputStream extends ProxyInputStream {
      * @throws IOException Some observer has thrown an exception, which is being passed down.
      */
     protected void noteDataBytes(final byte[] buffer, final int offset, final int length) throws IOException {
-        for (final Observer observer : getObservers()) {
-            observer.data(buffer, offset, length);
-        }
+        forEachObserver(observer -> observer.data(buffer, offset, length));
     }
 
     /**
@@ -230,9 +226,7 @@ public class ObservableInputStream extends ProxyInputStream {
      *         exception, which has been passed as an argument.
      */
     protected void noteError(final IOException exception) throws IOException {
-        for (final Observer observer : getObservers()) {
-            observer.error(exception);
-        }
+        forEachObserver(observer -> observer.error(exception));
     }
 
     /**
@@ -241,9 +235,7 @@ public class ObservableInputStream extends ProxyInputStream {
      * @throws IOException Some observer has thrown an exception, which is being passed down.
      */
     protected void noteFinished() throws IOException {
-        for (final Observer observer : getObservers()) {
-            observer.finished();
-        }
+        forEachObserver(Observer::finished);
     }
 
     private void notify(final byte[] buffer, final int offset, final int result, final IOException ioe) throws IOException {

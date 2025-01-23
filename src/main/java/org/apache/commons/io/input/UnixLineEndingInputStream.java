@@ -30,81 +30,25 @@ import java.io.InputStream;
  */
 public class UnixLineEndingInputStream extends InputStream {
 
-    private boolean slashNSeen;
+    private boolean atEos;
 
-    private boolean slashRSeen;
+    private boolean atSlashCr;
 
-    private boolean eofSeen;
+    private boolean atSlashLf;
 
-    private final InputStream target;
+    private final InputStream in;
 
-    private final boolean ensureLineFeedAtEndOfFile;
+    private final boolean lineFeedAtEndOfFile;
 
     /**
-     * Creates an input stream that filters another stream
+     * Constructs an input stream that filters another stream
      *
-     * @param in                        The input stream to wrap
+     * @param inputStream                        The input stream to wrap
      * @param ensureLineFeedAtEndOfFile true to ensure that the file ends with LF
      */
-    public UnixLineEndingInputStream(final InputStream in, final boolean ensureLineFeedAtEndOfFile) {
-        this.target = in;
-        this.ensureLineFeedAtEndOfFile = ensureLineFeedAtEndOfFile;
-    }
-
-    /**
-     * Reads the next item from the target, updating internal flags in the process
-     * @return the next int read from the target stream
-     * @throws IOException upon error
-     */
-    private int readWithUpdate() throws IOException {
-        final int target = this.target.read();
-        eofSeen = target == EOF;
-        if (eofSeen) {
-            return target;
-        }
-        slashNSeen = target == LF;
-        slashRSeen = target == CR;
-        return target;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public int read() throws IOException {
-        final boolean previousWasSlashR = slashRSeen;
-        if (eofSeen) {
-            return eofGame(previousWasSlashR);
-        }
-        final int target = readWithUpdate();
-        if (eofSeen) {
-            return eofGame(previousWasSlashR);
-        }
-        if (slashRSeen) {
-            return LF;
-        }
-
-        if (previousWasSlashR && slashNSeen) {
-            return read();
-        }
-
-        return target;
-    }
-
-    /**
-     * Handles the EOF-handling at the end of the stream
-     * @param previousWasSlashR Indicates if the last seen was a \r
-     * @return The next char to output to the stream
-     */
-    private int eofGame(final boolean previousWasSlashR) {
-        if (previousWasSlashR || !ensureLineFeedAtEndOfFile) {
-            return EOF;
-        }
-        if (!slashNSeen) {
-            slashNSeen = true;
-            return LF;
-        }
-        return EOF;
+    public UnixLineEndingInputStream(final InputStream inputStream, final boolean ensureLineFeedAtEndOfFile) {
+        this.in = inputStream;
+        this.lineFeedAtEndOfFile = ensureLineFeedAtEndOfFile;
     }
 
     /**
@@ -114,14 +58,71 @@ public class UnixLineEndingInputStream extends InputStream {
     @Override
     public void close() throws IOException {
         super.close();
-        target.close();
+        in.close();
+    }
+
+    /**
+     * Handles the end of stream condition.
+     *
+     * @param previousWasSlashCr Indicates if the last seen was a {@code \r}.
+     * @return The next char to output to the stream.
+     */
+    private int handleEos(final boolean previousWasSlashCr) {
+        if (previousWasSlashCr || !lineFeedAtEndOfFile) {
+            return EOF;
+        }
+        if (!atSlashLf) {
+            atSlashLf = true;
+            return LF;
+        }
+        return EOF;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public synchronized void mark(final int readlimit) {
+    public synchronized void mark(final int readLimit) {
         throw UnsupportedOperationExceptions.mark();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public int read() throws IOException {
+        final boolean previousWasSlashR = atSlashCr;
+        if (atEos) {
+            return handleEos(previousWasSlashR);
+        }
+        final int target = readWithUpdate();
+        if (atEos) {
+            return handleEos(previousWasSlashR);
+        }
+        if (atSlashCr) {
+            return LF;
+        }
+
+        if (previousWasSlashR && atSlashLf) {
+            return read();
+        }
+
+        return target;
+    }
+
+    /**
+     * Reads the next item from the target, updating internal flags in the process
+     * @return the next int read from the target stream
+     * @throws IOException upon error
+     */
+    private int readWithUpdate() throws IOException {
+        final int target = this.in.read();
+        atEos = target == EOF;
+        if (atEos) {
+            return target;
+        }
+        atSlashCr = target == CR;
+        atSlashLf = target == LF;
+        return target;
     }
 }

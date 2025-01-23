@@ -103,7 +103,7 @@ public class TaggedIOException extends IOExceptionWithCause {
     private final Serializable tag;
 
     /**
-     * Creates a tagged wrapper for the given exception.
+     * Constructs a tagged wrapper for the given exception.
      *
      * @param original the exception to be tagged
      * @param tag tag of this exception
@@ -111,15 +111,6 @@ public class TaggedIOException extends IOExceptionWithCause {
     public TaggedIOException(final IOException original, final Serializable tag) {
         super(original.getMessage(), original);
         this.tag = tag;
-    }
-
-    /**
-     * Returns the serializable tag object.
-     *
-     * @return tag object
-     */
-    public Serializable getTag() {
-        return tag;
     }
 
     /**
@@ -131,6 +122,15 @@ public class TaggedIOException extends IOExceptionWithCause {
     @Override
     public synchronized IOException getCause() {
         return (IOException) super.getCause();
+    }
+
+    /**
+     * Returns the serializable tag object.
+     *
+     * @return tag object
+     */
+    public Serializable getTag() {
+        return tag;
     }
 
 }

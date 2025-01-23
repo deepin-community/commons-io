@@ -58,6 +58,10 @@ import org.apache.commons.io.TaggedIOException;
  *     // ... or process the exception that was caused by something else
  * }
  * </pre>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @see TaggedIOException
  * @since 2.0
@@ -70,12 +74,23 @@ public class TaggedInputStream extends ProxyInputStream {
     private final Serializable tag = UUID.randomUUID();
 
     /**
-     * Creates a tagging decorator for the given input stream.
+     * Constructs a tagging decorator for the given input stream.
      *
      * @param proxy input stream to be decorated
      */
     public TaggedInputStream(final InputStream proxy) {
         super(proxy);
+    }
+
+    /**
+     * Tags any IOExceptions thrown, wrapping and re-throwing.
+     *
+     * @param e The IOException thrown
+     * @throws IOException if an I/O error occurs.
+     */
+    @Override
+    protected void handleIOException(final IOException e) throws IOException {
+        throw new TaggedIOException(e, tag);
     }
 
     /**
@@ -101,17 +116,6 @@ public class TaggedInputStream extends ProxyInputStream {
      */
     public void throwIfCauseOf(final Throwable throwable) throws IOException {
         TaggedIOException.throwCauseIfTaggedWith(throwable, tag);
-    }
-
-    /**
-     * Tags any IOExceptions thrown, wrapping and re-throwing.
-     *
-     * @param e The IOException thrown
-     * @throws IOException if an I/O error occurs.
-     */
-    @Override
-    protected void handleIOException(final IOException e) throws IOException {
-        throw new TaggedIOException(e, tag);
     }
 
 }

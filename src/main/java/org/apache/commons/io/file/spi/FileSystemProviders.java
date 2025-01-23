@@ -22,16 +22,18 @@ import java.net.URL;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.spi.FileSystemProvider;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 /**
- * Helps working with {@link FileSystemProvider}.
+ * Helps to work with {@link FileSystemProvider}.
  *
  * @since 2.9.0
  */
-public class FileSystemProviders {
+public class FileSystemProviders { // NOPMD Class will be final in 3.0.
 
+    private static final String SCHEME_FILE = "file";
     private static final FileSystemProviders INSTALLED = new FileSystemProviders(FileSystemProvider.installedProviders());
 
     /**
@@ -61,7 +63,7 @@ public class FileSystemProviders {
      * Might make public later.
      */
     private FileSystemProviders(final List<FileSystemProvider> providers) {
-        this.providers = providers;
+        this.providers = providers != null ? providers : Collections.emptyList();
     }
 
     /**
@@ -74,18 +76,11 @@ public class FileSystemProviders {
     public FileSystemProvider getFileSystemProvider(final String scheme) {
         Objects.requireNonNull(scheme, "scheme");
         // Check default provider first to avoid loading of installed providers.
-        if (scheme.equalsIgnoreCase("file")) {
+        if (scheme.equalsIgnoreCase(SCHEME_FILE)) {
             return FileSystems.getDefault().provider();
         }
         // Find provider.
-        if (providers != null) {
-            for (final FileSystemProvider provider : providers) {
-                if (provider.getScheme().equalsIgnoreCase(scheme)) {
-                    return provider;
-                }
-            }
-        }
-        return null;
+        return providers.stream().filter(provider -> provider.getScheme().equalsIgnoreCase(scheme)).findFirst().orElse(null);
     }
 
     /**

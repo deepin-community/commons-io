@@ -21,16 +21,17 @@ import java.io.FileFilter;
 import java.io.FilenameFilter;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.attribute.BasicFileAttributes;
 
 import org.apache.commons.io.file.PathFilter;
 
 /**
- * An interface which brings the FileFilter, FilenameFilter, and PathFilter interfaces together.
+ * An interface which brings the {@link FileFilter}, {@link FilenameFilter}, {@link PathFilter}, and {@link PathMatcher} interfaces together.
  *
  * @since 1.0
  */
-public interface IOFileFilter extends FileFilter, FilenameFilter, PathFilter {
+public interface IOFileFilter extends FileFilter, FilenameFilter, PathFilter, PathMatcher {
 
     /**
      * An empty String array.
@@ -38,9 +39,9 @@ public interface IOFileFilter extends FileFilter, FilenameFilter, PathFilter {
     String[] EMPTY_STRING_ARRAY = {};
 
     /**
-     * Checks to see if the File should be accepted by this filter.
+     * Tests if a File should be accepted by this filter.
      * <p>
-     * Defined in {@link java.io.FileFilter}.
+     * Defined in {@link FileFilter}.
      * </p>
      *
      * @param file the File to check.
@@ -50,12 +51,12 @@ public interface IOFileFilter extends FileFilter, FilenameFilter, PathFilter {
     boolean accept(File file);
 
     /**
-     * Checks to see if the File should be accepted by this filter.
+     * Tests if a File should be accepted by this filter.
      * <p>
-     * Defined in {@link java.io.FilenameFilter}.
+     * Defined in {@link FilenameFilter}.
      * </p>
      *
-     * @param dir the directory File to check.
+     * @param dir  the directory File to check.
      * @param name the file name within the directory to check.
      * @return true if this file matches the test.
      */
@@ -63,7 +64,7 @@ public interface IOFileFilter extends FileFilter, FilenameFilter, PathFilter {
     boolean accept(File dir, String name);
 
     /**
-     * Checks to see if the Path should be accepted by this filter.
+     * Checks to see if a Path should be accepted by this filter.
      *
      * @param path the Path to check.
      * @return true if this path matches the test.
@@ -71,11 +72,11 @@ public interface IOFileFilter extends FileFilter, FilenameFilter, PathFilter {
      */
     @Override
     default FileVisitResult accept(final Path path, final BasicFileAttributes attributes) {
-        return AbstractFileFilter.toFileVisitResult(accept(path.toFile()), path);
+        return AbstractFileFilter.toDefaultFileVisitResult(path != null && accept(path.toFile()));
     }
 
     /**
-     * Creates a new "and" filter with this filter.
+     * Constructs a new "and" filter with this filter.
      *
      * @param fileFilter the filter to "and".
      * @return a new filter.
@@ -86,7 +87,19 @@ public interface IOFileFilter extends FileFilter, FilenameFilter, PathFilter {
     }
 
     /**
-     * Creates a new "not" filter with this filter.
+     * Tests if a Path should be accepted by this filter.
+     *
+     * @param path the Path to check.
+     * @return true if this path matches the test.
+     * @since 2.14.0
+     */
+    @Override
+    default boolean matches(final Path path) {
+        return accept(path, null) != FileVisitResult.TERMINATE;
+    }
+
+    /**
+     * Constructs a new "not" filter with this filter.
      *
      * @return a new filter.
      * @since 2.9.0
@@ -96,7 +109,7 @@ public interface IOFileFilter extends FileFilter, FilenameFilter, PathFilter {
     }
 
     /**
-     * Creates a new "or" filter with this filter.
+     * Constructs a new "or" filter with this filter.
      *
      * @param fileFilter the filter to "or".
      * @return a new filter.

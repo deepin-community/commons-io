@@ -24,12 +24,12 @@ package org.apache.commons.io.input;
  * TODO Consider making this public and use from LineIterator but this feels like it belongs in LANG rather than IO.
  * </p>
  */
-class UnsupportedOperationExceptions {
+final class UnsupportedOperationExceptions {
 
     private static final String MARK_RESET = "mark/reset";
 
     /**
-     * Creates a new instance of UnsupportedOperationException for a {@code mark} method.
+     * Constructs a new instance of UnsupportedOperationException for a {@code mark} method.
      *
      * @return a new instance of UnsupportedOperationException
      */
@@ -39,7 +39,7 @@ class UnsupportedOperationExceptions {
     }
 
     /**
-     * Creates a new instance of UnsupportedOperationException for the given unsupported a {@code method} name.
+     * Constructs a new instance of UnsupportedOperationException for the given unsupported a {@code method} name.
      *
      * @param method A method name
      * @return a new instance of UnsupportedOperationException
@@ -49,7 +49,7 @@ class UnsupportedOperationExceptions {
     }
 
     /**
-     * Creates a new instance of UnsupportedOperationException for a {@code reset} method.
+     * Constructs a new instance of UnsupportedOperationException for a {@code reset} method.
      *
      * @return a new instance of UnsupportedOperationException
      */

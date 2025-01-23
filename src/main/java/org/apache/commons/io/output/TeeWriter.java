@@ -21,7 +21,7 @@ import java.io.Writer;
 import java.util.Collection;
 
 /**
- * Classic splitter of {@link Writer}. Named after the Unix 'tee' command. It allows a stream to be branched off so
+ * Classic splitter of {@link Writer}. Named after the UNIX 'tee' command. It allows a stream to be branched off so
  * there are now two streams.
  * <p>
  * This currently a only convenience class with the proper name "TeeWriter".
@@ -32,7 +32,7 @@ import java.util.Collection;
 public class TeeWriter extends ProxyCollectionWriter {
 
     /**
-     * Creates a new filtered collection writer.
+     * Constructs a new filtered collection writer.
      *
      * @param writers Writers to provide the underlying targets.
      */
@@ -41,7 +41,7 @@ public class TeeWriter extends ProxyCollectionWriter {
     }
 
     /**
-     * Creates a new filtered collection writer.
+     * Constructs a new filtered collection writer.
      *
      * @param writers Writers to provide the underlying targets.
      */

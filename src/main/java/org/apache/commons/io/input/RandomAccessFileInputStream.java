@@ -17,26 +17,126 @@
 
 package org.apache.commons.io.input;
 
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.Objects;
 
+import org.apache.commons.io.RandomAccessFileMode;
+import org.apache.commons.io.build.AbstractOrigin;
+import org.apache.commons.io.build.AbstractStreamBuilder;
+
 /**
  * Streams data from a {@link RandomAccessFile} starting at its current position.
+ * <p>
+ * To build an instance, use {@link Builder}.
+ * </p>
  *
+ * @see Builder
  * @since 2.8.0
  */
-public class RandomAccessFileInputStream extends InputStream {
+public class RandomAccessFileInputStream extends AbstractInputStream {
 
-    private final boolean closeOnClose;
+    // @formatter:off
+    /**
+     * Builds a new {@link RandomAccessFileInputStream}.
+     *
+     * <p>
+     * For example:
+     * </p>
+     * <pre>{@code
+     * RandomAccessFileInputStream s = RandomAccessFileInputStream.builder()
+     *   .setPath(path)
+     *   .setCloseOnClose(true)
+     *   .get();}
+     * </pre>
+     *
+     * @see #get()
+     * @since 2.12.0
+     */
+    // @formatter:on
+    public static class Builder extends AbstractStreamBuilder<RandomAccessFileInputStream, Builder> {
+
+        private RandomAccessFile randomAccessFile;
+        private boolean propagateClose;
+
+        /**
+         * Builds a new {@link RandomAccessFileInputStream}.
+         * <p>
+         * You must set input that supports {@link RandomAccessFile} or {@link File}, otherwise, this method throws an exception. Only set one of
+         * RandomAccessFile or an origin that can be converted to a File.
+         * </p>
+         * <p>
+         * This builder use the following aspects:
+         * </p>
+         * <ul>
+         * <li>{@link RandomAccessFile}</li>
+         * <li>{@link File}</li>
+         * <li>closeOnClose</li>
+         * </ul>
+         *
+         * @return a new instance.
+         * @throws IllegalStateException         if the {@code origin} is {@code null}.
+         * @throws IllegalStateException         if both RandomAccessFile and origin are set.
+         * @throws UnsupportedOperationException if the origin cannot be converted to a {@link File}.
+         * @see AbstractOrigin#getFile()
+         */
+        @SuppressWarnings("resource") // Caller closes depending on settings
+        @Override
+        public RandomAccessFileInputStream get() throws IOException {
+            if (randomAccessFile != null) {
+                if (getOrigin() != null) {
+                    throw new IllegalStateException(String.format("Only set one of RandomAccessFile (%s) or origin (%s)", randomAccessFile, getOrigin()));
+                }
+                return new RandomAccessFileInputStream(randomAccessFile, propagateClose);
+            }
+            return new RandomAccessFileInputStream(RandomAccessFileMode.READ_ONLY.create(checkOrigin().getFile()), propagateClose);
+        }
+
+        /**
+         * Sets whether to close the underlying file when this stream is closed.
+         *
+         * @param propagateClose Whether to close the underlying file when this stream is closed.
+         * @return {@code this} instance.
+         */
+        public Builder setCloseOnClose(final boolean propagateClose) {
+            this.propagateClose = propagateClose;
+            return this;
+        }
+
+        /**
+         * Sets the RandomAccessFile to stream.
+         *
+         * @param randomAccessFile the RandomAccessFile to stream.
+         * @return {@code this} instance.
+         */
+        public Builder setRandomAccessFile(final RandomAccessFile randomAccessFile) {
+            this.randomAccessFile = randomAccessFile;
+            return this;
+        }
+
+    }
+
+    /**
+     * Constructs a new {@link Builder}.
+     *
+     * @return a new {@link Builder}.
+     * @since 2.12.0
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    private final boolean propagateClose;
     private final RandomAccessFile randomAccessFile;
 
     /**
      * Constructs a new instance configured to leave the underlying file open when this stream is closed.
      *
      * @param file The file to stream.
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
+    @Deprecated
     public RandomAccessFileInputStream(final RandomAccessFile file) {
         this(file, false);
     }
@@ -44,12 +144,14 @@ public class RandomAccessFileInputStream extends InputStream {
     /**
      * Constructs a new instance.
      *
-     * @param file The file to stream.
-     * @param closeOnClose Whether to close the underlying file when this stream is closed.
+     * @param file         The file to stream.
+     * @param propagateClose Whether to close the underlying file when this stream is closed.
+     * @deprecated Use {@link #builder()}, {@link Builder}, and {@link Builder#get()}
      */
-    public RandomAccessFileInputStream(final RandomAccessFile file, final boolean closeOnClose) {
+    @Deprecated
+    public RandomAccessFileInputStream(final RandomAccessFile file, final boolean propagateClose) {
         this.randomAccessFile = Objects.requireNonNull(file, "file");
-        this.closeOnClose = closeOnClose;
+        this.propagateClose = propagateClose;
     }
 
     /**
@@ -76,13 +178,13 @@ public class RandomAccessFileInputStream extends InputStream {
      * @throws IOException If an I/O error occurs.
      */
     public long availableLong() throws IOException {
-        return randomAccessFile.length() - randomAccessFile.getFilePointer();
+        return isClosed() ? 0 : randomAccessFile.length() - randomAccessFile.getFilePointer();
     }
 
     @Override
     public void close() throws IOException {
         super.close();
-        if (closeOnClose) {
+        if (propagateClose) {
             randomAccessFile.close();
         }
     }
@@ -102,7 +204,7 @@ public class RandomAccessFileInputStream extends InputStream {
      * @return Whether to close the underlying file when this stream is closed.
      */
     public boolean isCloseOnClose() {
-        return closeOnClose;
+        return propagateClose;
     }
 
     @Override
@@ -120,17 +222,6 @@ public class RandomAccessFileInputStream extends InputStream {
         return randomAccessFile.read(bytes, offset, length);
     }
 
-    /**
-     * Delegates to the underlying file.
-     *
-     * @param position See {@link RandomAccessFile#seek(long)}.
-     * @throws IOException See {@link RandomAccessFile#seek(long)}.
-     * @see RandomAccessFile#seek(long)
-     */
-    private void seek(final long position) throws IOException {
-        randomAccessFile.seek(position);
-    }
-
     @Override
     public long skip(final long skipCount) throws IOException {
         if (skipCount <= 0) {
@@ -144,7 +235,7 @@ public class RandomAccessFileInputStream extends InputStream {
         final long targetPos = filePointer + skipCount;
         final long newPos = targetPos > fileLength ? fileLength - 1 : targetPos;
         if (newPos > 0) {
-            seek(newPos);
+            randomAccessFile.seek(newPos);
         }
         return randomAccessFile.getFilePointer() - filePointer;
     }

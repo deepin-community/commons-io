@@ -26,10 +26,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test case for {@link ExtensionFileComparator}.
+ * Tests {@link ExtensionFileComparator}.
  */
-public class ExtensionFileComparatorTest extends ComparatorAbstractTestCase {
-
+public class ExtensionFileComparatorTest extends ComparatorAbstractTest {
 
     @BeforeEach
     public void setUp() {

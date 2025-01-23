@@ -38,6 +38,7 @@ public class FileDeleteStrategy {
      * Force file deletion strategy.
      */
     static class ForceFileDeleteStrategy extends FileDeleteStrategy {
+
         /** Default Constructor */
         ForceFileDeleteStrategy() {
             super("Force");
@@ -105,7 +106,7 @@ public class FileDeleteStrategy {
 
     /**
      * Deletes the file object, which may be a file or a directory.
-     * All {@code IOException}s are caught and false returned instead.
+     * All {@link IOException}s are caught and false returned instead.
      * If the file does not exist or is null, true is returned.
      * <p>
      * Subclass writers should override {@link #doDelete(File)}, not this method.
@@ -129,7 +130,7 @@ public class FileDeleteStrategy {
      * Actually deletes the file object, which may be a file or a directory.
      * <p>
      * This method is designed for subclasses to override.
-     * The implementation may return either false or an {@code IOException}
+     * The implementation may return either false or an {@link IOException}
      * when deletion fails. The {@link #delete(File)} and {@link #deleteQuietly(File)}
      * methods will handle either response appropriately.
      * A check has been made to ensure that the file will exist.

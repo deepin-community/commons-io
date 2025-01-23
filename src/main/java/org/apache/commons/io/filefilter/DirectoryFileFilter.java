@@ -24,14 +24,14 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 
 /**
- * This filter accepts {@code File}s that are directories.
+ * This filter accepts {@link File}s that are directories.
  * <p>
  * For example, here is how to print out a list of the current directory's subdirectories:
  * </p>
  * <h2>Using Classic IO</h2>
  *
  * <pre>
- * File dir = new File(".");
+ * File dir = FileUtils.current();
  * String[] files = dir.list(DirectoryFileFilter.INSTANCE);
  * for (String file : files) {
  *     System.out.println(file);
@@ -41,7 +41,7 @@ import java.nio.file.attribute.BasicFileAttributes;
  * <h2>Using NIO</h2>
  *
  * <pre>
- * final Path dir = Paths.get("");
+ * final Path dir = PathUtils.current();
  * final AccumulatorPathVisitor visitor = AccumulatorPathVisitor.withLongCounters(DirectoryFileFilter.INSTANCE);
  * //
  * // Walk one dir
@@ -57,6 +57,10 @@ import java.nio.file.attribute.BasicFileAttributes;
  * System.out.println(visitor.getDirList());
  * System.out.println(visitor.getFileList());
  * </pre>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.0
  * @see FileFilterUtils#directoryFileFilter()
@@ -93,7 +97,7 @@ public class DirectoryFileFilter extends AbstractFileFilter implements Serializa
      */
     @Override
     public boolean accept(final File file) {
-        return file.isDirectory();
+        return file != null && file.isDirectory();
     }
 
     /**
@@ -105,7 +109,7 @@ public class DirectoryFileFilter extends AbstractFileFilter implements Serializa
      */
     @Override
     public FileVisitResult accept(final Path file, final BasicFileAttributes attributes) {
-        return toFileVisitResult(Files.isDirectory(file), file);
+        return toFileVisitResult(file != null && Files.isDirectory(file));
     }
 
 }

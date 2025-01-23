@@ -17,6 +17,7 @@
 package org.apache.commons.io.filefilter;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.Serializable;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
@@ -25,20 +26,23 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 /**
- * A {@link java.io.FileFilter} providing conditional AND logic across a list of
+ * A {@link FileFilter} providing conditional AND logic across a list of
  * file filters. This filter returns {@code true} if all filters in the
  * list return {@code true}. Otherwise, it returns {@code false}.
  * Checking of the file filter list stops when the first filter returns
  * {@code false}.
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.0
  * @see FileFilterUtils#and(IOFileFilter...)
  */
-public class AndFileFilter
-        extends AbstractFileFilter
-        implements ConditionalFileFilter, Serializable {
+public class AndFileFilter extends AbstractFileFilter implements ConditionalFileFilter, Serializable {
 
     private static final long serialVersionUID = 7215974688563965257L;
 
@@ -73,6 +77,17 @@ public class AndFileFilter
     }
 
     /**
+     * Constructs a new instance for the give filters.
+     *
+     * @param fileFilters filters to OR.
+     * @since 2.9.0
+     */
+    public AndFileFilter(final IOFileFilter... fileFilters) {
+        this(Objects.requireNonNull(fileFilters, "fileFilters").length);
+        addFileFilter(fileFilters);
+    }
+
+    /**
      * Constructs a new file filter that ANDs the result of other filters.
      *
      * @param filter1  the first filter, must second be null
@@ -86,18 +101,7 @@ public class AndFileFilter
     }
 
     /**
-     * Constructs a new instance for the give filters.
-     * @param fileFilters filters to OR.
-     *
-     * @since 2.9.0
-     */
-    public AndFileFilter(final IOFileFilter... fileFilters) {
-        this(Objects.requireNonNull(fileFilters, "fileFilters").length);
-        addFileFilter(fileFilters);
-    }
-
-    /**
-     * Constructs a new instance of {@code AndFileFilter}
+     * Constructs a new instance of {@link AndFileFilter}
      * with the specified list of filters.
      *
      * @param fileFilters  a List of IOFileFilter instances, copied.
@@ -112,15 +116,7 @@ public class AndFileFilter
      */
     @Override
     public boolean accept(final File file) {
-        if (isEmpty()) {
-            return false;
-        }
-        for (final IOFileFilter fileFilter : fileFilters) {
-            if (!fileFilter.accept(file)) {
-                return false;
-            }
-        }
-        return true;
+        return !isEmpty() && fileFilters.stream().allMatch(fileFilter -> fileFilter.accept(file));
     }
 
     /**
@@ -128,15 +124,7 @@ public class AndFileFilter
      */
     @Override
     public boolean accept(final File file, final String name) {
-        if (isEmpty()) {
-            return false;
-        }
-        for (final IOFileFilter fileFilter : fileFilters) {
-            if (!fileFilter.accept(file, name)) {
-                return false;
-            }
-        }
-        return true;
+        return !isEmpty() && fileFilters.stream().allMatch(fileFilter -> fileFilter.accept(file, name));
     }
 
     /**
@@ -145,15 +133,8 @@ public class AndFileFilter
      */
     @Override
     public FileVisitResult accept(final Path file, final BasicFileAttributes attributes) {
-        if (isEmpty()) {
-            return FileVisitResult.TERMINATE;
-        }
-        for (final IOFileFilter fileFilter : fileFilters) {
-            if (fileFilter.accept(file, attributes) != FileVisitResult.CONTINUE) {
-                return FileVisitResult.TERMINATE;
-            }
-        }
-        return FileVisitResult.CONTINUE;
+        return isEmpty() ? FileVisitResult.TERMINATE
+                : toDefaultFileVisitResult(fileFilters.stream().allMatch(fileFilter -> fileFilter.accept(file, attributes) == FileVisitResult.CONTINUE));
     }
 
     /**
@@ -161,7 +142,7 @@ public class AndFileFilter
      */
     @Override
     public void addFileFilter(final IOFileFilter fileFilter) {
-        this.fileFilters.add(Objects.requireNonNull(fileFilter, "fileFilter"));
+        fileFilters.add(Objects.requireNonNull(fileFilter, "fileFilter"));
     }
 
     /**
@@ -171,9 +152,7 @@ public class AndFileFilter
      * @since 2.9.0
      */
     public void addFileFilter(final IOFileFilter... fileFilters) {
-        for (final IOFileFilter fileFilter : Objects.requireNonNull(fileFilters, "fileFilters")) {
-            addFileFilter(fileFilter);
-        }
+        Stream.of(Objects.requireNonNull(fileFilters, "fileFilters")).forEach(this::addFileFilter);
     }
 
     /**
@@ -181,11 +160,11 @@ public class AndFileFilter
      */
     @Override
     public List<IOFileFilter> getFileFilters() {
-        return Collections.unmodifiableList(this.fileFilters);
+        return Collections.unmodifiableList(fileFilters);
     }
 
     private boolean isEmpty() {
-        return this.fileFilters.isEmpty();
+        return fileFilters.isEmpty();
     }
 
     /**
@@ -193,7 +172,7 @@ public class AndFileFilter
      */
     @Override
     public boolean removeFileFilter(final IOFileFilter ioFileFilter) {
-        return this.fileFilters.remove(ioFileFilter);
+        return fileFilters.remove(ioFileFilter);
     }
 
     /**
@@ -206,7 +185,7 @@ public class AndFileFilter
     }
 
     /**
-     * Provide a String representation of this file filter.
+     * Builds a String representation of this file filter.
      *
      * @return a String representation
      */
@@ -215,12 +194,7 @@ public class AndFileFilter
         final StringBuilder buffer = new StringBuilder();
         buffer.append(super.toString());
         buffer.append("(");
-        for (int i = 0; i < fileFilters.size(); i++) {
-            if (i > 0) {
-                buffer.append(",");
-            }
-            buffer.append(fileFilters.get(i));
-        }
+        append(fileFilters, buffer);
         buffer.append(")");
         return buffer.toString();
     }

@@ -16,16 +16,21 @@
  */
 package org.apache.commons.io.input;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.StandardOpenOption;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests functionality of {@link BufferedFileChannelInputStream}.
  *
- * This class was ported and adapted from Apache Spark commit 933dc6cb7b3de1d8ccaf73d124d6eb95b947ed19 where it was
- * called {@code BufferedFileChannelInputStreamSuite}.
+ * This class was ported and adapted from Apache Spark commit 933dc6cb7b3de1d8ccaf73d124d6eb95b947ed19 where it was called
+ * {@code BufferedFileChannelInputStreamSuite}.
  */
 public class BufferedFileChannelInputStreamTest extends AbstractInputStreamTest {
 
@@ -37,8 +42,36 @@ public class BufferedFileChannelInputStreamTest extends AbstractInputStreamTest 
         // @formatter:off
         inputStreams = new InputStream[] {
             new BufferedFileChannelInputStream(inputFile), // default
-            new BufferedFileChannelInputStream(inputFile, 123) // small, unaligned buffer
+            new BufferedFileChannelInputStream(inputFile, 123), // small, unaligned buffer size
+            BufferedFileChannelInputStream.builder().setPath(inputFile).get(), // default
+            BufferedFileChannelInputStream.builder().setPath(inputFile).setBufferSize(123).get(), // small, unaligned buffer size
+            BufferedFileChannelInputStream.builder().setURI(inputFile.toUri()).setBufferSize(1024).get(), // URI and buffer size
+            BufferedFileChannelInputStream.builder().setPath(inputFile).setOpenOptions(StandardOpenOption.READ).get(), // open options
         };
         //@formatter:on
     }
+
+    @Override
+    @Test
+    public void testAvailableAfterOpen() throws Exception {
+        for (final InputStream inputStream : inputStreams) {
+            assertTrue(inputStream.available() > 0);
+        }
+    }
+
+    @Test
+    public void testBuilderGet() {
+        // java.lang.IllegalStateException: origin == null
+        assertThrows(IllegalStateException.class, () -> BufferedFileChannelInputStream.builder().get());
+    }
+
+    @Test
+    public void testReadAfterClose() throws Exception {
+        for (final InputStream inputStream : inputStreams) {
+            inputStream.close();
+            assertThrows(IOException.class, inputStream::read);
+        }
+    }
+
+
 }

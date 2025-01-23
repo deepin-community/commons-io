@@ -21,11 +21,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -33,16 +32,16 @@ import java.nio.file.Path;
 import java.util.stream.IntStream;
 
 import org.apache.commons.io.IOUtils;
-import org.junit.jupiter.api.io.TempDir;
+import org.apache.commons.io.file.AbstractTempDirTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
- * Unit tests for the {@code DeferredFileOutputStream} class.
- *
+ * Tests {@code DeferredFileOutputStream}.
  */
-public class DeferredFileOutputStreamTest {
+public class DeferredFileOutputStreamTest extends AbstractTempDirTest {
 
     public static IntStream data() {
         return IntStream.of(1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096);
@@ -64,27 +63,20 @@ public class DeferredFileOutputStreamTest {
      */
     @ParameterizedTest(name = "initialBufferSize = {0}")
     @MethodSource("data")
-    public void testAboveThreshold(final int initialBufferSize) {
-        final File testFile = new File("testAboveThreshold.dat");
-
-        // Ensure that the test starts from a clean base.
-        testFile.delete();
-
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length - 5, initialBufferSize,
-            testFile);
-        try {
+    public void testAboveThreshold(final int initialBufferSize) throws IOException {
+        final File testFile = Files.createTempFile(tempDirPath, "testAboveThreshold", "dat").toFile();
+        try (DeferredFileOutputStream dfos = DeferredFileOutputStream.builder()
+                .setThreshold(testBytes.length - 5)
+                .setBufferSize(initialBufferSize)
+                .setOutputFile(testFile)
+                .get()) {
             dfos.write(testBytes, 0, testBytes.length);
             dfos.close();
-        } catch (final IOException e) {
-            fail("Unexpected IOException");
+            assertFalse(dfos.isInMemory());
+            assertNull(dfos.getData());
+            assertEquals(testFile.length(), dfos.getByteCount());
+            verifyResultFile(testFile);
         }
-        assertFalse(dfos.isInMemory());
-        assertNull(dfos.getData());
-
-        verifyResultFile(testFile);
-
-        // Ensure that the test starts from a clean base.
-        testFile.delete();
     }
 
     /**
@@ -95,19 +87,21 @@ public class DeferredFileOutputStreamTest {
     @ParameterizedTest(name = "initialBufferSize = {0}")
     @MethodSource("data")
     public void testAboveThresholdGetInputStream(final int initialBufferSize, final @TempDir Path tempDir) throws IOException {
-        final File testFile = tempDir.resolve("testAboveThreshold.dat").toFile();
-
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length - 5, initialBufferSize,
-            testFile);
-        dfos.write(testBytes, 0, testBytes.length);
-        dfos.close();
-        assertFalse(dfos.isInMemory());
-
-        try (InputStream is = dfos.toInputStream()) {
-            assertArrayEquals(testBytes, IOUtils.toByteArray(is));
+        final File testFile = Files.createTempFile(tempDirPath, "testAboveThreshold", "dat").toFile();
+        try (DeferredFileOutputStream dfos = DeferredFileOutputStream.builder()
+                .setThreshold(testBytes.length - 5)
+                .setBufferSize(initialBufferSize)
+                .setOutputFile(testFile)
+                .get()) {
+            dfos.write(testBytes, 0, testBytes.length);
+            dfos.close();
+            assertFalse(dfos.isInMemory());
+            assertEquals(testFile.length(), dfos.getByteCount());
+            try (InputStream is = dfos.toInputStream()) {
+                assertArrayEquals(testBytes, IOUtils.toByteArray(is));
+            }
+            verifyResultFile(testFile);
         }
-
-        verifyResultFile(testFile);
     }
 
     /**
@@ -116,40 +110,44 @@ public class DeferredFileOutputStreamTest {
      */
     @ParameterizedTest(name = "initialBufferSize = {0}")
     @MethodSource("data")
-    public void testAtThreshold(final int initialBufferSize) {
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length, initialBufferSize, null);
-        try {
+    public void testAtThreshold(final int initialBufferSize) throws IOException {
+        try (DeferredFileOutputStream dfos = DeferredFileOutputStream.builder()
+            // @formatter:off
+                .setThreshold(testBytes.length)
+                .setBufferSize(initialBufferSize)
+                .get()) {
+            // @formatter:on
             dfos.write(testBytes, 0, testBytes.length);
             dfos.close();
-        } catch (final IOException e) {
-            fail("Unexpected IOException");
+            assertTrue(dfos.isInMemory());
+            assertEquals(testBytes.length, dfos.getByteCount());
+            final byte[] resultBytes = dfos.getData();
+            assertEquals(testBytes.length, resultBytes.length);
+            assertArrayEquals(resultBytes, testBytes);
         }
-        assertTrue(dfos.isInMemory());
-
-        final byte[] resultBytes = dfos.getData();
-        assertEquals(testBytes.length, resultBytes.length);
-        assertArrayEquals(resultBytes, testBytes);
     }
 
     /**
      * Tests the case where the amount of data falls below the threshold, and is therefore confined to memory.
+     * @throws IOException
      */
     @ParameterizedTest(name = "initialBufferSize = {0}")
     @MethodSource("data")
-    public void testBelowThreshold(final int initialBufferSize) {
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length + 42, initialBufferSize,
-            null);
-        try {
+    public void testBelowThreshold(final int initialBufferSize) throws IOException {
+        try (DeferredFileOutputStream dfos = DeferredFileOutputStream.builder()
+            // @formatter:off
+                .setThreshold(testBytes.length + 42)
+                .setBufferSize(initialBufferSize)
+                .get()) {
+            // @formatter:on
             dfos.write(testBytes, 0, testBytes.length);
             dfos.close();
-        } catch (final IOException e) {
-            fail("Unexpected IOException");
+            assertTrue(dfos.isInMemory());
+            assertEquals(testBytes.length, dfos.getByteCount());
+            final byte[] resultBytes = dfos.getData();
+            assertEquals(testBytes.length, resultBytes.length);
+            assertArrayEquals(resultBytes, testBytes);
         }
-        assertTrue(dfos.isInMemory());
-
-        final byte[] resultBytes = dfos.getData();
-        assertEquals(testBytes.length, resultBytes.length);
-        assertArrayEquals(resultBytes, testBytes);
     }
 
     /**
@@ -159,228 +157,248 @@ public class DeferredFileOutputStreamTest {
     @ParameterizedTest(name = "initialBufferSize = {0}")
     @MethodSource("data")
     public void testBelowThresholdGetInputStream(final int initialBufferSize) throws IOException {
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length + 42, initialBufferSize,
-            null);
-        dfos.write(testBytes, 0, testBytes.length);
-        dfos.close();
-        assertTrue(dfos.isInMemory());
-
-        try (InputStream is = dfos.toInputStream()) {
-            assertArrayEquals(testBytes, IOUtils.toByteArray(is));
-        }
-    }
-
-    /**
-     * Test specifying a temporary file and the threshold is reached.
-     */
-    @ParameterizedTest(name = "initialBufferSize = {0}")
-    @MethodSource("data")
-    public void testTempFileAboveThreshold(final int initialBufferSize) {
-
-        final String prefix = "commons-io-test";
-        final String suffix = ".out";
-        final File tempDir = new File(".");
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length - 5, initialBufferSize,
-            prefix, suffix, tempDir);
-        assertNull(dfos.getFile(), "Check file is null-A");
-        try {
+        // @formatter:off
+        try (DeferredFileOutputStream dfos = DeferredFileOutputStream.builder()
+                .setThreshold(testBytes.length + 42)
+                .setBufferSize(initialBufferSize)
+                .get()) {
+        // @formatter:on
             dfos.write(testBytes, 0, testBytes.length);
             dfos.close();
-        } catch (final IOException e) {
-            fail("Unexpected IOException");
+            assertTrue(dfos.isInMemory());
+            assertEquals(testBytes.length, dfos.getByteCount());
+            try (InputStream is = dfos.toInputStream()) {
+                assertArrayEquals(testBytes, IOUtils.toByteArray(is));
+            }
         }
-        assertFalse(dfos.isInMemory());
-        assertNull(dfos.getData());
-        assertNotNull(dfos.getFile(), "Check file not null");
-        assertTrue(dfos.getFile().exists(), "Check file exists");
-        assertTrue(dfos.getFile().getName().startsWith(prefix), "Check prefix");
-        assertTrue(dfos.getFile().getName().endsWith(suffix), "Check suffix");
-        assertEquals(tempDir.getPath(), dfos.getFile().getParent(), "Check dir");
-
-        verifyResultFile(dfos.getFile());
-
-        // Delete the temporary file.
-        dfos.getFile().delete();
     }
 
     /**
-     * Test specifying a temporary file and the threshold is reached.
+     * Tests specifying a temporary file and the threshold is reached.
      */
     @ParameterizedTest(name = "initialBufferSize = {0}")
     @MethodSource("data")
-    public void testTempFileAboveThresholdPrefixOnly(final int initialBufferSize) {
+    public void testTempFileAboveThreshold(final int initialBufferSize) throws IOException {
+        final String prefix = "commons-io-test";
+        final String suffix = ".out";
+        // @formatter:off
+        try (DeferredFileOutputStream dfos = DeferredFileOutputStream.builder()
+                .setThreshold(testBytes.length - 5)
+                .setBufferSize(initialBufferSize)
+                .setPrefix(prefix)
+                .setSuffix(suffix)
+                .setDirectory(tempDirFile)
+                .setDirectory(tempDirPath.toFile())
+                .get()) {
+        // @formatter:on
+            assertNull(dfos.getFile(), "Check File is null-A");
+            assertNull(dfos.getPath(), "Check Path is null-A");
+            dfos.write(testBytes, 0, testBytes.length);
+            dfos.close();
+            assertFalse(dfos.isInMemory());
+            assertEquals(testBytes.length, dfos.getByteCount());
+            assertNull(dfos.getData());
+            assertNotNull(dfos.getFile(), "Check file not null");
+            assertTrue(dfos.getFile().exists(), "Check file exists");
+            assertTrue(dfos.getFile().getName().startsWith(prefix), "Check prefix");
+            assertTrue(dfos.getFile().getName().endsWith(suffix), "Check suffix");
+            assertEquals(tempDirPath, dfos.getPath().getParent(), "Check dir");
+            verifyResultFile(dfos.getFile());
+        }
+    }
 
+    /**
+     * Tests specifying a temporary file and the threshold is reached.
+     * @throws IOException
+     */
+    @ParameterizedTest(name = "initialBufferSize = {0}")
+    @MethodSource("data")
+    public void testTempFileAboveThresholdPrefixOnly(final int initialBufferSize) throws IOException {
         final String prefix = "commons-io-test";
         final String suffix = null;
-        final File tempDir = null;
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length - 5, initialBufferSize,
-            prefix, suffix, tempDir);
-        assertNull(dfos.getFile(), "Check file is null-A");
-        try {
-            dfos.write(testBytes, 0, testBytes.length);
-            dfos.close();
-        } catch (final IOException e) {
-            fail("Unexpected IOException");
+        try (final DeferredFileOutputStream dfos = DeferredFileOutputStream.builder()
+            // @formatter:off
+                .setThreshold(testBytes.length - 5)
+                .setBufferSize(initialBufferSize)
+                .setPrefix(prefix)
+                .setSuffix(suffix)
+                .setDirectory((Path) null)
+                .get()) {
+            // @formatter:on
+            try {
+                assertNull(dfos.getFile(), "Check File is null-A");
+                assertNull(dfos.getPath(), "Check Path is null-A");
+                dfos.write(testBytes, 0, testBytes.length);
+                dfos.close();
+                assertFalse(dfos.isInMemory());
+                assertNull(dfos.getData());
+                assertEquals(testBytes.length, dfos.getByteCount());
+                assertNotNull(dfos.getFile(), "Check file not null");
+                assertTrue(dfos.getFile().exists(), "Check file exists");
+                assertTrue(dfos.getFile().getName().startsWith(prefix), "Check prefix");
+                assertTrue(dfos.getFile().getName().endsWith(".tmp"), "Check suffix"); // ".tmp" is default
+                verifyResultFile(dfos.getFile());
+            } finally {
+                // Delete the temporary file.
+                dfos.getFile().delete();
+            }
         }
-        assertFalse(dfos.isInMemory());
-        assertNull(dfos.getData());
-        assertNotNull(dfos.getFile(), "Check file not null");
-        assertTrue(dfos.getFile().exists(), "Check file exists");
-        assertTrue(dfos.getFile().getName().startsWith(prefix), "Check prefix");
-        assertTrue(dfos.getFile().getName().endsWith(".tmp"), "Check suffix"); // ".tmp" is default
-
-        verifyResultFile(dfos.getFile());
-
-        // Delete the temporary file.
-        dfos.getFile().delete();
     }
 
     /**
-     * Test specifying a temporary file and the threshold not reached.
+     * Tests specifying a temporary file and the threshold not reached.
+     * @throws IOException
      */
     @ParameterizedTest(name = "initialBufferSize = {0}")
     @MethodSource("data")
-    public void testTempFileBelowThreshold(final int initialBufferSize) {
-
+    public void testTempFileBelowThreshold(final int initialBufferSize) throws IOException {
         final String prefix = "commons-io-test";
         final String suffix = ".out";
-        final File tempDir = new File(".");
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length + 42, initialBufferSize,
-            prefix, suffix, tempDir);
-        assertNull(dfos.getFile(), "Check file is null-A");
-        try {
+        try (final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length + 42, initialBufferSize, prefix, suffix, tempDirFile)) {
+            assertNull(dfos.getFile(), "Check File is null-A");
+            assertNull(dfos.getPath(), "Check Path is null-A");
             dfos.write(testBytes, 0, testBytes.length);
             dfos.close();
-        } catch (final IOException e) {
-            fail("Unexpected IOException");
+            assertTrue(dfos.isInMemory());
+            assertEquals(testBytes.length, dfos.getByteCount());
+            assertNull(dfos.getFile(), "Check file is null-B");
         }
-        assertTrue(dfos.isInMemory());
-        assertNull(dfos.getFile(), "Check file is null-B");
     }
 
     /**
-     * Test specifying a temporary file and the threshold is reached.
+     * Tests specifying a temporary file and the threshold is reached.
      *
      * @throws Exception
      */
     @Test
     public void testTempFileError() throws Exception {
-
         final String prefix = null;
         final String suffix = ".out";
-        final File tempDir = new File(".");
-        try {
-            new DeferredFileOutputStream(testBytes.length - 5, prefix, suffix, tempDir).close();
-            fail("Expected IllegalArgumentException ");
-        } catch (final IllegalArgumentException e) {
-            // expected
+        assertThrows(NullPointerException.class, () -> new DeferredFileOutputStream(testBytes.length - 5, prefix, suffix, tempDirFile));
+    }
+
+    /**
+     * Tests the case where the threshold is negative, and therefore the data is always written to disk. The actual data
+     * written to disk is verified, as is the file itself.
+     */
+    @ParameterizedTest(name = "initialBufferSize = {0}")
+    @MethodSource("data")
+    public void testThresholdNegative(final int initialBufferSize) throws IOException {
+        final File testFile = Files.createTempFile(tempDirPath, "testThresholdNegative", "dat").toFile();
+        try (DeferredFileOutputStream dfos = DeferredFileOutputStream.builder()
+                .setThreshold(-1)
+                .setBufferSize(initialBufferSize)
+                .setOutputFile(testFile)
+                .get()) {
+            dfos.write(testBytes, 0, testBytes.length);
+            dfos.close();
+            assertFalse(dfos.isInMemory());
+            assertNull(dfos.getData());
+            assertEquals(testFile.length(), dfos.getByteCount());
+            verifyResultFile(testFile);
         }
     }
 
     /**
      * Tests the case where there are multiple writes beyond the threshold, to ensure that the
      * {@code thresholdReached()} method is only called once, as the threshold is crossed for the first time.
+     * @throws IOException
      */
     @ParameterizedTest(name = "initialBufferSize = {0}")
     @MethodSource("data")
-    public void testThresholdReached(final int initialBufferSize) {
-        final File testFile = new File("testThresholdReached.dat");
-
-        // Ensure that the test starts from a clean base.
-        testFile.delete();
-
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length / 2, initialBufferSize,
-            testFile);
-        final int chunkSize = testBytes.length / 3;
-
-        try {
+    public void testThresholdReached(final int initialBufferSize) throws IOException {
+        final File testFile = Files.createTempFile(tempDirPath, "testThresholdReached", "dat").toFile();
+        try (final DeferredFileOutputStream dfos = DeferredFileOutputStream.builder()
+            // @formatter:off
+                .setThreshold(testBytes.length /2)
+                .setBufferSize(initialBufferSize)
+                .setOutputFile(testFile)
+                .get()) {
+            // @formatter:on
+            final int chunkSize = testBytes.length / 3;
             dfos.write(testBytes, 0, chunkSize);
             dfos.write(testBytes, chunkSize, chunkSize);
             dfos.write(testBytes, chunkSize * 2, testBytes.length - chunkSize * 2);
             dfos.close();
-        } catch (final IOException e) {
-            fail("Unexpected IOException");
+            assertFalse(dfos.isInMemory());
+            assertNull(dfos.getData());
+            assertEquals(testBytes.length, dfos.getByteCount());
+            verifyResultFile(testFile);
         }
-        assertFalse(dfos.isInMemory());
-        assertNull(dfos.getData());
-
-        verifyResultFile(testFile);
-
-        // Ensure that the test starts from a clean base.
-        testFile.delete();
     }
 
     /**
-     * Test whether writeTo() properly writes large content.
+     * Tests whether writeTo() properly writes large content.
      */
     @ParameterizedTest(name = "initialBufferSize = {0}")
     @MethodSource("data")
-    public void testWriteToLarge(final int initialBufferSize) {
-        final File testFile = new File("testWriteToFile.dat");
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream(initialBufferSize);
-        // Ensure that the test starts from a clean base.
-        testFile.delete();
+    public void testWriteToLarge(final int initialBufferSize) throws IOException {
+        final File testFile = Files.createTempFile(tempDirPath, "testWriteToFile", "dat").toFile();
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(initialBufferSize);
+                DeferredFileOutputStream dfos = DeferredFileOutputStream.builder().setThreshold(testBytes.length / 2).setOutputFile(testFile).get()) {
+            dfos.write(testBytes);
 
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length / 2, testFile);
-        try {
+            assertTrue(testFile.exists());
+            assertFalse(dfos.isInMemory());
+            assertEquals(testBytes.length, dfos.getByteCount());
+
+            assertThrows(IOException.class, () -> dfos.writeTo(baos));
+
+            dfos.close();
+            dfos.writeTo(baos);
+            final byte[] copiedBytes = baos.toByteArray();
+            assertArrayEquals(testBytes, copiedBytes);
+            verifyResultFile(testFile);
+        }
+    }
+
+    /**
+     * Tests whether writeTo() properly writes large content.
+     */
+    @ParameterizedTest(name = "initialBufferSize = {0}")
+    @MethodSource("data")
+    public void testWriteToLargeCtor(final int initialBufferSize) throws IOException {
+        final File testFile = Files.createTempFile(tempDirPath, "testWriteToFile", "dat").toFile();
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(initialBufferSize);
+                DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length / 2, testFile)) {
             dfos.write(testBytes);
 
             assertTrue(testFile.exists());
             assertFalse(dfos.isInMemory());
 
-            try {
-                dfos.writeTo(baos);
-                fail("Should not have been able to write before closing");
-            } catch (final IOException ioe) {
-                // ok, as expected
-            }
+            assertThrows(IOException.class, () -> dfos.writeTo(baos));
+            assertEquals(testBytes.length, dfos.getByteCount());
 
             dfos.close();
             dfos.writeTo(baos);
-        } catch (final IOException ioe) {
-            fail("Unexpected IOException");
+            final byte[] copiedBytes = baos.toByteArray();
+            assertArrayEquals(testBytes, copiedBytes);
+            verifyResultFile(testFile);
         }
-        final byte[] copiedBytes = baos.toByteArray();
-        assertArrayEquals(testBytes, copiedBytes);
-        verifyResultFile(testFile);
-        testFile.delete();
     }
 
     /**
-     * Test whether writeTo() properly writes small content.
+     * Tests whether writeTo() properly writes small content.
+     * @throws IOException
      */
     @ParameterizedTest(name = "initialBufferSize = {0}")
     @MethodSource("data")
-    public void testWriteToSmall(final int initialBufferSize) {
-        final File testFile = new File("testWriteToMem.dat");
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream(initialBufferSize);
-        // Ensure that the test starts from a clean base.
-        testFile.delete();
-
-        final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length * 2, initialBufferSize,
-            testFile);
-        try {
+    public void testWriteToSmall(final int initialBufferSize) throws IOException {
+        final File testFile = Files.createTempFile(tempDirPath, "testWriteToMem", "dat").toFile();
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(initialBufferSize);
+                final DeferredFileOutputStream dfos = new DeferredFileOutputStream(testBytes.length * 2, initialBufferSize, testFile)) {
             dfos.write(testBytes);
 
-            assertFalse(testFile.exists());
             assertTrue(dfos.isInMemory());
 
-            try {
-                dfos.writeTo(baos);
-                fail("Should not have been able to write before closing");
-            } catch (final IOException ioe) {
-                // ok, as expected
-            }
+            assertThrows(IOException.class, () -> dfos.writeTo(baos));
+            assertEquals(testBytes.length, dfos.getByteCount());
 
             dfos.close();
             dfos.writeTo(baos);
-        } catch (final IOException ioe) {
-            fail("Unexpected IOException");
+            final byte[] copiedBytes = baos.toByteArray();
+            assertArrayEquals(testBytes, copiedBytes);
         }
-        final byte[] copiedBytes = baos.toByteArray();
-        assertArrayEquals(testBytes, copiedBytes);
-
-        testFile.delete();
     }
 
     /**
@@ -388,9 +406,8 @@ public class DeferredFileOutputStreamTest {
      *
      * @param testFile The file containing the test output.
      */
-    private void verifyResultFile(final File testFile) {
-        try {
-            final InputStream fis = Files.newInputStream(testFile.toPath());
+    private void verifyResultFile(final File testFile) throws IOException {
+        try (final InputStream fis = Files.newInputStream(testFile.toPath())) {
             assertEquals(testBytes.length, fis.available());
 
             final byte[] resultBytes = new byte[testBytes.length];
@@ -398,16 +415,6 @@ public class DeferredFileOutputStreamTest {
 
             assertArrayEquals(resultBytes, testBytes);
             assertEquals(-1, fis.read(resultBytes));
-
-            try {
-                fis.close();
-            } catch (final IOException e) {
-                // Ignore an exception on close
-            }
-        } catch (final FileNotFoundException e) {
-            fail("Unexpected FileNotFoundException");
-        } catch (final IOException e) {
-            fail("Unexpected IOException");
         }
     }
 }

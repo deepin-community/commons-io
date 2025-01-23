@@ -21,9 +21,14 @@ import java.io.Serializable;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Objects;
 
 /**
  * This filter produces a logical NOT of the filters specified.
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.0
  * @see FileFilterUtils#notFileFilter(IOFileFilter)
@@ -39,12 +44,10 @@ public class NotFileFilter extends AbstractFileFilter implements Serializable {
      * Constructs a new file filter that NOTs the result of another filter.
      *
      * @param filter the filter, must not be null
-     * @throws IllegalArgumentException if the filter is null
+     * @throws NullPointerException if the filter is null
      */
     public NotFileFilter(final IOFileFilter filter) {
-        if (filter == null) {
-            throw new IllegalArgumentException("The filter must not be null");
-        }
+        Objects.requireNonNull(filter, "filter");
         this.filter = filter;
     }
 
@@ -84,8 +87,7 @@ public class NotFileFilter extends AbstractFileFilter implements Serializable {
     }
 
     private FileVisitResult not(final FileVisitResult accept) {
-        return accept == FileVisitResult.CONTINUE ? FileVisitResult.TERMINATE
-            : FileVisitResult.CONTINUE;
+        return accept == FileVisitResult.CONTINUE ? FileVisitResult.TERMINATE : FileVisitResult.CONTINUE;
     }
 
     /**

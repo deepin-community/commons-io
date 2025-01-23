@@ -36,7 +36,7 @@ import org.apache.commons.io.IOUtils;
 public class ProxyCollectionWriter extends FilterCollectionWriter {
 
     /**
-     * Creates a new proxy collection writer.
+     * Constructs a new proxy collection writer.
      *
      * @param writers Writers object to provide the underlying targets.
      */
@@ -45,7 +45,7 @@ public class ProxyCollectionWriter extends FilterCollectionWriter {
     }
 
     /**
-     * Creates a new proxy collection writer.
+     * Constructs a new proxy collection writer.
      *
      * @param writers Writers to provide the underlying targets.
      */
@@ -77,6 +77,7 @@ public class ProxyCollectionWriter extends FilterCollectionWriter {
      * @throws IOException if an I/O error occurs.
      * @since 2.0
      */
+    @SuppressWarnings("resource") // Fluent API.
     @Override
     public Writer append(final char c) throws IOException {
         try {
@@ -96,6 +97,7 @@ public class ProxyCollectionWriter extends FilterCollectionWriter {
      * @return this writer
      * @throws IOException if an I/O error occurs.
      */
+    @SuppressWarnings("resource") // Fluent API.
     @Override
     public Writer append(final CharSequence csq) throws IOException {
         try {
@@ -118,6 +120,7 @@ public class ProxyCollectionWriter extends FilterCollectionWriter {
      * @return this writer
      * @throws IOException if an I/O error occurs.
      */
+    @SuppressWarnings("resource") // Fluent API.
     @Override
     public Writer append(final CharSequence csq, final int start, final int end) throws IOException {
         try {

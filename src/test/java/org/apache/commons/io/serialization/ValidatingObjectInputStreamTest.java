@@ -36,11 +36,19 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+/**
+ * Tests {@link ValidatingObjectInputStream}.
+ */
 public class ValidatingObjectInputStreamTest extends AbstractCloseableListTest {
+    private static final ClassNameMatcher ALWAYS_TRUE = className -> true;
     private MockSerializedClass testObject;
+
     private InputStream testStream;
 
-    private static final ClassNameMatcher ALWAYS_TRUE = className -> true;
+    private void assertSerialization(final ObjectInputStream ois) throws ClassNotFoundException, IOException {
+        final MockSerializedClass result = (MockSerializedClass) ois.readObject();
+        assertEquals(testObject, result);
+    }
 
     @BeforeEach
     public void setupMockSerializedClass() throws IOException {
@@ -51,31 +59,8 @@ public class ValidatingObjectInputStreamTest extends AbstractCloseableListTest {
         testStream = closeAfterEachTest(new ByteArrayInputStream(bos.toByteArray()));
     }
 
-    private void assertSerialization(final ObjectInputStream ois) throws ClassNotFoundException, IOException {
-        final MockSerializedClass result = (MockSerializedClass) (ois.readObject());
-        assertEquals(testObject, result);
-    }
-
     @Test
-    public void noAccept() {
-        assertThrows(InvalidClassException.class, () -> assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))));
-    }
-
-    @Test
-    public void exceptionIncludesClassName() throws Exception {
-        try {
-            assertSerialization(
-                    closeAfterEachTest(new ValidatingObjectInputStream(testStream)));
-            fail("Expected an InvalidClassException");
-        } catch(final InvalidClassException ice) {
-            final String name = MockSerializedClass.class.getName();
-            assertTrue(ice.getMessage().contains(name), "Expecting message to contain " + name);
-        }
-    }
-
-    @Test
-    public void acceptCustomMatcher() throws Exception {
+    public void testAcceptCustomMatcher() throws Exception {
         assertSerialization(
                 closeAfterEachTest(new ValidatingObjectInputStream(testStream))
                 .accept(ALWAYS_TRUE)
@@ -83,17 +68,7 @@ public class ValidatingObjectInputStreamTest extends AbstractCloseableListTest {
     }
 
     @Test
-    public void rejectCustomMatcher() {
-        assertThrows(InvalidClassException.class,
-                () -> assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept(MockSerializedClass.class)
-                .reject(ALWAYS_TRUE)
-        ));
-    }
-
-    @Test
-    public void acceptPattern() throws Exception {
+    public void testAcceptPattern() throws Exception {
         assertSerialization(
                 closeAfterEachTest(new ValidatingObjectInputStream(testStream))
                 .accept(Pattern.compile(".*MockSerializedClass.*"))
@@ -101,17 +76,7 @@ public class ValidatingObjectInputStreamTest extends AbstractCloseableListTest {
     }
 
     @Test
-    public void rejectPattern() {
-        assertThrows(InvalidClassException.class,
-                () -> assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept(MockSerializedClass.class)
-                .reject(Pattern.compile("org.*"))
-        ));
-    }
-
-    @Test
-    public void acceptWildcard() throws Exception {
+    public void testAcceptWildcard() throws Exception {
         assertSerialization(
                 closeAfterEachTest(new ValidatingObjectInputStream(testStream))
                 .accept("org.apache.commons.io.*")
@@ -119,96 +84,8 @@ public class ValidatingObjectInputStreamTest extends AbstractCloseableListTest {
     }
 
     @Test
-    public void rejectWildcard() {
-        assertThrows(InvalidClassException.class,
-                () -> assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept(MockSerializedClass.class)
-                .reject("org.*")
-        ));
-    }
-
-    @Test
-    public void ourTestClassNotAccepted() {
-        assertThrows(InvalidClassException.class,
-                () -> assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept(Integer.class)
-        ));
-    }
-
-    @Test
-    public void ourTestClassOnlyAccepted() throws Exception {
-        assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept(MockSerializedClass.class)
-        );
-    }
-
-    @Test
-    public void ourTestClassAcceptedFirst() throws Exception {
-        assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept(MockSerializedClass.class, Integer.class)
-        );
-    }
-
-    @Test
-    public void ourTestClassAcceptedSecond() throws Exception {
-        assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept(Integer.class, MockSerializedClass.class)
-        );
-    }
-
-    @Test
-    public void ourTestClassAcceptedFirstWildcard() throws Exception {
-        assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept("*MockSerializedClass","*Integer")
-        );
-    }
-
-    @Test
-    public void ourTestClassAcceptedSecondWildcard() throws Exception {
-        assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept("*Integer","*MockSerializedClass")
-        );
-    }
-
-    @Test
-    public void reject() {
-        assertThrows(InvalidClassException.class,
-                () -> assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept(Long.class)
-                .reject(MockSerializedClass.class, Integer.class)
-        ));
-    }
-
-    @Test
-    public void rejectPrecedence() {
-        assertThrows(InvalidClassException.class,
-                () -> assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .accept(MockSerializedClass.class)
-                .reject(MockSerializedClass.class, Integer.class)
-        ));
-    }
-
-    @Test
-    public void rejectOnly() {
-        assertThrows(InvalidClassException.class,
-                () -> assertSerialization(
-                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
-                .reject(Integer.class)
-        ));
-    }
-
-    @Test
-    public void customInvalidMethod() {
-        class CustomVOIS extends ValidatingObjectInputStream {
+    public void testCustomInvalidMethod() {
+        final class CustomVOIS extends ValidatingObjectInputStream {
             CustomVOIS(final InputStream is) throws IOException {
                 super(is);
             }
@@ -223,6 +100,132 @@ public class ValidatingObjectInputStreamTest extends AbstractCloseableListTest {
                 () -> assertSerialization(
                 closeAfterEachTest(new CustomVOIS(testStream))
                 .reject(Integer.class)
+        ));
+    }
+
+    @Test
+    public void testExceptionIncludesClassName() throws Exception {
+        try {
+            assertSerialization(
+                    closeAfterEachTest(new ValidatingObjectInputStream(testStream)));
+            fail("Expected an InvalidClassException");
+        } catch (final InvalidClassException ice) {
+            final String name = MockSerializedClass.class.getName();
+            assertTrue(ice.getMessage().contains(name), "Expecting message to contain " + name);
+        }
+    }
+
+    @Test
+    public void testNoAccept() {
+        assertThrows(InvalidClassException.class, () -> assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))));
+    }
+
+    @Test
+    public void testOurTestClassAcceptedFirst() throws Exception {
+        assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept(MockSerializedClass.class, Integer.class)
+        );
+    }
+
+    @Test
+    public void testOurTestClassAcceptedFirstWildcard() throws Exception {
+        assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept("*MockSerializedClass", "*Integer")
+        );
+    }
+
+    @Test
+    public void testOurTestClassAcceptedSecond() throws Exception {
+        assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept(Integer.class, MockSerializedClass.class)
+        );
+    }
+
+    @Test
+    public void testOurTestClassAcceptedSecondWildcard() throws Exception {
+        assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept("*Integer", "*MockSerializedClass")
+        );
+    }
+
+    @Test
+    public void testOurTestClassNotAccepted() {
+        assertThrows(InvalidClassException.class,
+                () -> assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept(Integer.class)
+        ));
+    }
+
+    @Test
+    public void testOurTestClassOnlyAccepted() throws Exception {
+        assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept(MockSerializedClass.class)
+        );
+    }
+
+    @Test
+    public void testReject() {
+        assertThrows(InvalidClassException.class,
+                () -> assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept(Long.class)
+                .reject(MockSerializedClass.class, Integer.class)
+        ));
+    }
+
+    @Test
+    public void testRejectCustomMatcher() {
+        assertThrows(InvalidClassException.class,
+                () -> assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept(MockSerializedClass.class)
+                .reject(ALWAYS_TRUE)
+        ));
+    }
+
+    @Test
+    public void testRejectOnly() {
+        assertThrows(InvalidClassException.class,
+                () -> assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .reject(Integer.class)
+        ));
+    }
+
+    @Test
+    public void testRejectPattern() {
+        assertThrows(InvalidClassException.class,
+                () -> assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept(MockSerializedClass.class)
+                .reject(Pattern.compile("org.*"))
+        ));
+    }
+
+    @Test
+    public void testRejectPrecedence() {
+        assertThrows(InvalidClassException.class,
+                () -> assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept(MockSerializedClass.class)
+                .reject(MockSerializedClass.class, Integer.class)
+        ));
+    }
+
+    @Test
+    public void testRejectWildcard() {
+        assertThrows(InvalidClassException.class,
+                () -> assertSerialization(
+                closeAfterEachTest(new ValidatingObjectInputStream(testStream))
+                .accept(MockSerializedClass.class)
+                .reject("org.*")
         ));
     }
 }

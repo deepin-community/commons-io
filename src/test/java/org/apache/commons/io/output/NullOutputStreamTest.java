@@ -16,14 +16,12 @@
  */
 package org.apache.commons.io.output;
 
-
 import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
 
-
 /**
- * Really not a lot to do here, but checking that no Exceptions are thrown.
+ * Tests {@link NullOutputStream}.
  */
 public class NullOutputStreamTest {
 
@@ -40,14 +38,14 @@ public class NullOutputStreamTest {
 
     @Test
     public void testNewInstance() throws IOException {
-        try (final NullOutputStream nos = NullOutputStream.NULL_OUTPUT_STREAM) {
+        try (NullOutputStream nos = NullOutputStream.INSTANCE) {
             process(nos);
         }
     }
 
     @Test
     public void testSingleton() throws IOException {
-        try (final NullOutputStream nos = NullOutputStream.NULL_OUTPUT_STREAM) {
+        try (NullOutputStream nos = NullOutputStream.INSTANCE) {
             process(nos);
         }
     }

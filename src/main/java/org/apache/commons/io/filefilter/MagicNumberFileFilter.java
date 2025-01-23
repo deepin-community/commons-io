@@ -28,8 +28,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.Objects;
 
-import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.RandomAccessFileMode;
+import org.apache.commons.io.RandomAccessFiles;
 
 /**
  * <p>
@@ -40,7 +42,7 @@ import org.apache.commons.io.IOUtils;
  * </p>
  * <h2>Using Classic IO</h2>
  * <pre>
- * File dir = new File(".");
+ * File dir = FileUtils.current();
  * MagicNumberFileFilter javaClassFileFilter =
  *     MagicNumberFileFilter(new byte[] {(byte) 0xCA, (byte) 0xFE,
  *       (byte) 0xBA, (byte) 0xBE});
@@ -57,7 +59,7 @@ import org.apache.commons.io.IOUtils;
  * </p>
  *
  * <pre>
- * File dir = new File(".");
+ * File dir = FileUtils.current();
  * MagicNumberFileFilter tarFileFilter =
  *     MagicNumberFileFilter("ustar", 257);
  * String[] tarFiles = dir.list(tarFileFilter);
@@ -67,7 +69,7 @@ import org.apache.commons.io.IOUtils;
  * </pre>
  * <h2>Using NIO</h2>
  * <pre>
- * final Path dir = Paths.get("");
+ * final Path dir = PathUtils.current();
  * final AccumulatorPathVisitor visitor = AccumulatorPathVisitor.withLongCounters(MagicNumberFileFilter("ustar", 257));
  * //
  * // Walk one dir
@@ -83,6 +85,15 @@ import org.apache.commons.io.IOUtils;
  * System.out.println(visitor.getDirList());
  * System.out.println(visitor.getFileList());
  * </pre>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
+ *
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 2.0
  * @see FileFilterUtils#magicNumberFileFilter(byte[])
@@ -90,8 +101,7 @@ import org.apache.commons.io.IOUtils;
  * @see FileFilterUtils#magicNumberFileFilter(byte[], long)
  * @see FileFilterUtils#magicNumberFileFilter(String, long)
  */
-public class MagicNumberFileFilter extends AbstractFileFilter implements
-        Serializable {
+public class MagicNumberFileFilter extends AbstractFileFilter implements Serializable {
 
     /**
      * The serialization version unique identifier.
@@ -155,26 +165,23 @@ public class MagicNumberFileFilter extends AbstractFileFilter implements
      *     MagicNumberFileFilter(new byte[] {0xCA, 0xFE, 0xBA, 0xBE}, 0);
      * </pre>
      *
-     * @param magicNumber the magic number to look for in the file.
+     * @param magicNumbers the magic number to look for in the file.
      * @param offset the byte offset in the file to start comparing bytes.
      *
-     * @throws IllegalArgumentException if {@code magicNumber} is
-     *         {@code null}, or contains no bytes, or {@code offset}
+     * @throws IllegalArgumentException if {@code magicNumber}
+     *         contains no bytes, or {@code offset}
      *         is a negative number.
      */
-    public MagicNumberFileFilter(final byte[] magicNumber, final long offset) {
-        if (magicNumber == null) {
-            throw new IllegalArgumentException("The magic number cannot be null");
-        }
-        if (magicNumber.length == 0) {
+    public MagicNumberFileFilter(final byte[] magicNumbers, final long offset) {
+        Objects.requireNonNull(magicNumbers, "magicNumbers");
+        if (magicNumbers.length == 0) {
             throw new IllegalArgumentException("The magic number must contain at least one byte");
         }
         if (offset < 0) {
             throw new IllegalArgumentException("The offset cannot be negative");
         }
 
-        this.magicNumbers = IOUtils.byteArray(magicNumber.length);
-        System.arraycopy(magicNumber, 0, this.magicNumbers, 0, magicNumber.length);
+        this.magicNumbers = magicNumbers.clone();
         this.byteOffset = offset;
     }
 
@@ -220,13 +227,11 @@ public class MagicNumberFileFilter extends AbstractFileFilter implements
      * @param offset the byte offset in the file to start comparing bytes.
      *
      * @throws IllegalArgumentException if {@code magicNumber} is
-     *         {@code null} or the empty String, or {@code offset} is
+     *         the empty String, or {@code offset} is
      *         a negative number.
      */
     public MagicNumberFileFilter(final String magicNumber, final long offset) {
-        if (magicNumber == null) {
-            throw new IllegalArgumentException("The magic number cannot be null");
-        }
+        Objects.requireNonNull(magicNumber, "magicNumber");
         if (magicNumber.isEmpty()) {
             throw new IllegalArgumentException("The magic number must contain at least one byte");
         }
@@ -234,8 +239,7 @@ public class MagicNumberFileFilter extends AbstractFileFilter implements
             throw new IllegalArgumentException("The offset cannot be negative");
         }
 
-        this.magicNumbers = magicNumber.getBytes(Charset.defaultCharset()); // explicitly uses the platform default
-                                                                            // charset
+        this.magicNumbers = magicNumber.getBytes(Charset.defaultCharset()); // explicitly uses the platform default charset
         this.byteOffset = offset;
     }
 
@@ -258,22 +262,12 @@ public class MagicNumberFileFilter extends AbstractFileFilter implements
     @Override
     public boolean accept(final File file) {
         if (file != null && file.isFile() && file.canRead()) {
-            try {
-                try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
-                    final byte[] fileBytes = IOUtils.byteArray(this.magicNumbers.length);
-                    randomAccessFile.seek(byteOffset);
-                    final int read = randomAccessFile.read(fileBytes);
-                    if (read != magicNumbers.length) {
-                        return false;
-                    }
-                    return Arrays.equals(this.magicNumbers, fileBytes);
-                }
-            }
-            catch (final IOException ioe) {
+            try (RandomAccessFile randomAccessFile = RandomAccessFileMode.READ_ONLY.create(file)) {
+                return Arrays.equals(magicNumbers, RandomAccessFiles.read(randomAccessFile, byteOffset, magicNumbers.length));
+            } catch (final IOException ignored) {
                 // Do nothing, fall through and do not accept file
             }
         }
-
         return false;
     }
 
@@ -297,16 +291,17 @@ public class MagicNumberFileFilter extends AbstractFileFilter implements
     public FileVisitResult accept(final Path file, final BasicFileAttributes attributes) {
         if (file != null && Files.isRegularFile(file) && Files.isReadable(file)) {
             try {
-                try (final FileChannel fileChannel = FileChannel.open(file)) {
+                try (FileChannel fileChannel = FileChannel.open(file)) {
                     final ByteBuffer byteBuffer = ByteBuffer.allocate(this.magicNumbers.length);
+                    fileChannel.position(byteOffset);
                     final int read = fileChannel.read(byteBuffer);
                     if (read != magicNumbers.length) {
                         return FileVisitResult.TERMINATE;
                     }
-                    return toFileVisitResult(Arrays.equals(this.magicNumbers, byteBuffer.array()), file);
+                    return toFileVisitResult(Arrays.equals(this.magicNumbers, byteBuffer.array()));
                 }
             }
-            catch (final IOException ioe) {
+            catch (final IOException ignored) {
                 // Do nothing, fall through and do not accept file
             }
         }
@@ -323,8 +318,8 @@ public class MagicNumberFileFilter extends AbstractFileFilter implements
     public String toString() {
         final StringBuilder builder = new StringBuilder(super.toString());
         builder.append("(");
-        builder.append(new String(magicNumbers, Charset.defaultCharset()));// TODO perhaps use hex if value is not
-                                                                           // printable
+        // TODO perhaps use hex if value is not printable
+        builder.append(new String(magicNumbers, Charset.defaultCharset()));
         builder.append(",");
         builder.append(this.byteOffset);
         builder.append(")");

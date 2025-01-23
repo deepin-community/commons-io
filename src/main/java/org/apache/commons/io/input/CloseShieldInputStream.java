@@ -31,7 +31,18 @@ import java.io.InputStream;
 public class CloseShieldInputStream extends ProxyInputStream {
 
     /**
-     * Creates a proxy that shields the given input stream from being closed.
+     * Constructs a proxy that only shields {@link System#in} from closing.
+     *
+     * @param inputStream the candidate input stream.
+     * @return the given stream or a proxy on {@link System#in}.
+     * @since 2.17.0
+     */
+    public static InputStream systemIn(final InputStream inputStream) {
+        return inputStream == System.in ? wrap(inputStream) : inputStream;
+    }
+
+    /**
+     * Constructs a proxy that shields the given input stream from being closed.
      *
      * @param inputStream the input stream to wrap
      * @return the created proxy
@@ -42,7 +53,7 @@ public class CloseShieldInputStream extends ProxyInputStream {
     }
 
     /**
-     * Creates a proxy that shields the given input stream from being closed.
+     * Constructs a proxy that shields the given input stream from being closed.
      *
      * @param inputStream underlying input stream
      * @deprecated Using this constructor prevents IDEs from warning if the
@@ -61,7 +72,7 @@ public class CloseShieldInputStream extends ProxyInputStream {
      */
     @Override
     public void close() {
-        in = ClosedInputStream.CLOSED_INPUT_STREAM;
+        in = ClosedInputStream.INSTANCE;
     }
 
 }

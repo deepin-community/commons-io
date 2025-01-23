@@ -28,21 +28,26 @@ import org.apache.commons.io.input.ProxyInputStream;
 public class ThrowOnCloseInputStream extends ProxyInputStream {
 
     /**
-     * Default ctor.
+     * Constructs a new instance.
      */
-    @SuppressWarnings("resource")
     public ThrowOnCloseInputStream() {
         super(new NullInputStream());
     }
 
     /**
+     * Constructs a new instance.
+     *
      * @param proxy InputStream to delegate to.
      */
     public ThrowOnCloseInputStream(final InputStream proxy) {
         super(proxy);
     }
 
-    /** @see java.io.InputStream#close() */
+    /**
+     * Always throws IOException.
+     *
+     * @see java.io.InputStream#close()
+     */
     @Override
     public void close() throws IOException {
         throw new IOException(getClass().getSimpleName() + ".close() called.");

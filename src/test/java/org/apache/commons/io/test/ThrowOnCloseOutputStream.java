@@ -28,10 +28,10 @@ import org.apache.commons.io.output.ProxyOutputStream;
 public class ThrowOnCloseOutputStream extends ProxyOutputStream {
 
     /**
-     * Default ctor.
+     * Default constructor.
      */
     public ThrowOnCloseOutputStream() {
-        super(NullOutputStream.NULL_OUTPUT_STREAM);
+        super(NullOutputStream.INSTANCE);
     }
 
     /**

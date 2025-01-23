@@ -18,15 +18,16 @@ package org.apache.commons.io.input;
 
 import static org.apache.commons.io.IOUtils.EOF;
 
+import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.commons.io.IOUtils;
+
 /**
- * Closed input stream. This stream returns EOF to all attempts to read
- * something from the stream.
+ * Always returns {@link IOUtils#EOF} to all attempts to read something from an input stream.
  * <p>
- * Typically uses of this class include testing for corner cases in methods
- * that accept input streams and acting as a sentinel value instead of a
- * {@code null} input stream.
+ * Typically uses of this class include testing for corner cases in methods that accept input streams and acting as a
+ * sentinel value instead of a {@code null} input stream.
  * </p>
  *
  * @since 1.4
@@ -34,9 +35,29 @@ import java.io.InputStream;
 public class ClosedInputStream extends InputStream {
 
     /**
-     * A singleton.
+     * The singleton instance.
+     *
+     * @since 2.12.0
      */
-    public static final ClosedInputStream CLOSED_INPUT_STREAM = new ClosedInputStream();
+    public static final ClosedInputStream INSTANCE = new ClosedInputStream();
+
+    /**
+     * The singleton instance.
+     *
+     * @deprecated Use {@link #INSTANCE}.
+     */
+    @Deprecated
+    public static final ClosedInputStream CLOSED_INPUT_STREAM = INSTANCE;
+
+    /**
+     * Returns {@link #INSTANCE} if the given InputStream is null, otherwise returns the given input stream.
+     *
+     * @param in the InputStream to test.
+     * @return {@link #INSTANCE} if the given InputStream is null, otherwise returns the given input stream.
+     */
+    static InputStream ifNull(final InputStream in) {
+        return in != null ? in : INSTANCE;
+    }
 
     /**
      * Returns -1 to indicate that the stream is closed.
@@ -45,6 +66,19 @@ public class ClosedInputStream extends InputStream {
      */
     @Override
     public int read() {
+        return EOF;
+    }
+
+    /**
+     * Returns -1 to indicate that the stream is closed.
+     *
+     * @param b ignored.
+     * @param off ignored.
+     * @param len ignored.
+     * @return always -1
+     */
+    @Override
+    public int read(final byte[] b, final int off, final int len) throws IOException {
         return EOF;
     }
 

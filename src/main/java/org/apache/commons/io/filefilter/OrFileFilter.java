@@ -17,6 +17,7 @@
 package org.apache.commons.io.filefilter;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.Serializable;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Path;
@@ -25,11 +26,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 /**
- * A {@link java.io.FileFilter} providing conditional OR logic across a list of file filters. This filter returns
+ * A {@link FileFilter} providing conditional OR logic across a list of file filters. This filter returns
  * {@code true} if any filters in the list return {@code true}. Otherwise, it returns {@code false}. Checking of the
  * file filter list stops when the first filter returns {@code true}.
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.0
  * @see FileFilterUtils#or(IOFileFilter...)
@@ -42,7 +48,7 @@ public class OrFileFilter extends AbstractFileFilter implements ConditionalFileF
     private final List<IOFileFilter> fileFilters;
 
     /**
-     * Constructs a new instance of {@code OrFileFilter}.
+     * Constructs a new instance of {@link OrFileFilter}.
      *
      * @since 1.1
      */
@@ -93,7 +99,7 @@ public class OrFileFilter extends AbstractFileFilter implements ConditionalFileF
     }
 
     /**
-     * Constructs a new instance of {@code OrFileFilter} with the specified filters.
+     * Constructs a new instance of {@link OrFileFilter} with the specified filters.
      *
      * @param fileFilters the file filters for this filter, copied.
      * @since 1.1
@@ -107,12 +113,7 @@ public class OrFileFilter extends AbstractFileFilter implements ConditionalFileF
      */
     @Override
     public boolean accept(final File file) {
-        for (final IOFileFilter fileFilter : fileFilters) {
-            if (fileFilter.accept(file)) {
-                return true;
-            }
-        }
-        return false;
+        return fileFilters.stream().anyMatch(fileFilter -> fileFilter.accept(file));
     }
 
     /**
@@ -120,12 +121,7 @@ public class OrFileFilter extends AbstractFileFilter implements ConditionalFileF
      */
     @Override
     public boolean accept(final File file, final String name) {
-        for (final IOFileFilter fileFilter : fileFilters) {
-            if (fileFilter.accept(file, name)) {
-                return true;
-            }
-        }
-        return false;
+        return fileFilters.stream().anyMatch(fileFilter -> fileFilter.accept(file, name));
     }
 
     /**
@@ -133,12 +129,7 @@ public class OrFileFilter extends AbstractFileFilter implements ConditionalFileF
      */
     @Override
     public FileVisitResult accept(final Path file, final BasicFileAttributes attributes) {
-        for (final IOFileFilter fileFilter : fileFilters) {
-            if (fileFilter.accept(file, attributes) == FileVisitResult.CONTINUE) {
-                return FileVisitResult.CONTINUE;
-            }
-        }
-        return FileVisitResult.TERMINATE;
+        return toDefaultFileVisitResult(fileFilters.stream().anyMatch(fileFilter -> fileFilter.accept(file, attributes) == FileVisitResult.CONTINUE));
     }
 
     /**
@@ -156,9 +147,7 @@ public class OrFileFilter extends AbstractFileFilter implements ConditionalFileF
      * @since 2.9.0
      */
     public void addFileFilter(final IOFileFilter... fileFilters) {
-        for (final IOFileFilter fileFilter : Objects.requireNonNull(fileFilters, "fileFilters")) {
-            addFileFilter(fileFilter);
-        }
+        Stream.of(Objects.requireNonNull(fileFilters, "fileFilters")).forEach(this::addFileFilter);
     }
 
     /**
@@ -196,14 +185,7 @@ public class OrFileFilter extends AbstractFileFilter implements ConditionalFileF
         final StringBuilder buffer = new StringBuilder();
         buffer.append(super.toString());
         buffer.append("(");
-        if (fileFilters != null) {
-            for (int i = 0; i < fileFilters.size(); i++) {
-                if (i > 0) {
-                    buffer.append(",");
-                }
-                buffer.append(fileFilters.get(i));
-            }
-        }
+        append(fileFilters, buffer);
         buffer.append(")");
         return buffer.toString();
     }

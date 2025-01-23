@@ -37,7 +37,7 @@ import org.apache.commons.io.file.Counters.PathCounters;
 public class DeletingPathVisitor extends CountingPathVisitor {
 
     /**
-     * Creates a new instance configured with a BigInteger {@link PathCounters}.
+     * Constructs a new instance configured with a BigInteger {@link PathCounters}.
      *
      * @return a new instance configured with a BigInteger {@link PathCounters}.
      */
@@ -46,7 +46,7 @@ public class DeletingPathVisitor extends CountingPathVisitor {
     }
 
     /**
-     * Creates a new instance configured with a long {@link PathCounters}.
+     * Constructs a new instance configured with a long {@link PathCounters}.
      *
      * @return a new instance configured with a long {@link PathCounters}.
      */
@@ -66,9 +66,8 @@ public class DeletingPathVisitor extends CountingPathVisitor {
      * @param skip The files to skip deleting.
      * @since 2.8.0
      */
-    public DeletingPathVisitor(final PathCounters pathCounter, final DeleteOption[] deleteOption,
-        final String... skip) {
-        this(pathCounter, PathUtils.NOFOLLOW_LINK_OPTION_ARRAY, deleteOption, skip);
+    public DeletingPathVisitor(final PathCounters pathCounter, final DeleteOption[] deleteOption, final String... skip) {
+        this(pathCounter, PathUtils.noFollowLinkOptionArray(), deleteOption, skip);
     }
 
     /**
@@ -80,15 +79,14 @@ public class DeletingPathVisitor extends CountingPathVisitor {
      * @param skip The files to skip deleting.
      * @since 2.9.0
      */
-    public DeletingPathVisitor(final PathCounters pathCounter, final LinkOption[] linkOptions,
-        final DeleteOption[] deleteOption, final String... skip) {
+    public DeletingPathVisitor(final PathCounters pathCounter, final LinkOption[] linkOptions, final DeleteOption[] deleteOption, final String... skip) {
         super(pathCounter);
         final String[] temp = skip != null ? skip.clone() : EMPTY_STRING_ARRAY;
         Arrays.sort(temp);
         this.skip = temp;
         this.overrideReadOnly = StandardDeleteOption.overrideReadOnly(deleteOption);
         // TODO Files.deleteIfExists() never follows links, so use LinkOption.NOFOLLOW_LINKS in other calls to Files.
-        this.linkOptions = linkOptions == null ? PathUtils.NOFOLLOW_LINK_OPTION_ARRAY : linkOptions.clone();
+        this.linkOptions = linkOptions == null ? PathUtils.noFollowLinkOptionArray() : linkOptions.clone();
     }
 
     /**
@@ -109,7 +107,7 @@ public class DeletingPathVisitor extends CountingPathVisitor {
      * @return true to process the given path, false if not.
      */
     private boolean accept(final Path path) {
-        return Arrays.binarySearch(skip, Objects.toString(path.getFileName(), null)) < 0;
+        return Arrays.binarySearch(skip, PathUtils.getFileNameString(path)) < 0;
     }
 
     @Override
@@ -165,7 +163,7 @@ public class DeletingPathVisitor extends CountingPathVisitor {
                 try {
                     // deleteIfExists does not work for this case
                     Files.delete(file);
-                } catch (final NoSuchFileException e) {
+                } catch (final NoSuchFileException ignored) {
                     // ignore
                 }
             }

@@ -18,8 +18,8 @@ package org.apache.commons.io.input;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -30,13 +30,37 @@ import org.apache.commons.io.TaggedIOException;
 import org.junit.jupiter.api.Test;
 
 /**
- * JUnit Test Case for {@link TaggedReader}.
+ * Tests {@link TaggedReader}.
  */
 public class TaggedReaderTest {
 
     @Test
+    public void testBrokenReader() {
+        final IOException exception = new IOException("test exception");
+        final TaggedReader reader = new TaggedReader(new BrokenReader(exception));
+
+        // Test the ready() method
+        final IOException readyException = assertThrows(IOException.class, reader::ready);
+        assertTrue(reader.isCauseOf(readyException));
+        final IOException rethrownReadyException = assertThrows(IOException.class, () -> reader.throwIfCauseOf(readyException));
+        assertEquals(exception, rethrownReadyException);
+
+        // Test the read() method
+        final IOException readException = assertThrows(IOException.class, reader::read);
+        assertTrue(reader.isCauseOf(readException));
+        final IOException rethrownReadException = assertThrows(IOException.class, () -> reader.throwIfCauseOf(readException));
+        assertEquals(exception, rethrownReadException);
+
+        // Test the close() method
+        final IOException closeException = assertThrows(IOException.class, reader::close);
+        assertTrue(reader.isCauseOf(closeException));
+        final IOException rethrownCloseException = assertThrows(IOException.class, () -> reader.throwIfCauseOf(closeException));
+        assertEquals(exception, rethrownCloseException);
+    }
+
+    @Test
     public void testEmptyReader() throws IOException {
-        try (final Reader reader = new TaggedReader(ClosedReader.CLOSED_READER)) {
+        try (Reader reader = new TaggedReader(ClosedReader.INSTANCE)) {
             assertFalse(reader.ready());
             assertEquals(-1, reader.read());
             assertEquals(-1, reader.read(new char[1]));
@@ -46,7 +70,7 @@ public class TaggedReaderTest {
 
     @Test
     public void testNormalReader() throws IOException {
-        try (final Reader reader = new TaggedReader(new StringReader("abc"))) {
+        try (Reader reader = new TaggedReader(new StringReader("abc"))) {
             assertTrue(reader.ready());
             assertEquals('a', reader.read());
             final char[] buffer = new char[1];
@@ -59,57 +83,9 @@ public class TaggedReaderTest {
     }
 
     @Test
-    public void testBrokenReader() {
-        final IOException exception = new IOException("test exception");
-        final TaggedReader reader = new TaggedReader(new BrokenReader(exception));
-
-        // Test the ready() method
-        try {
-            reader.ready();
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertTrue(reader.isCauseOf(e));
-            try {
-                reader.throwIfCauseOf(e);
-                fail("Expected exception not thrown.");
-            } catch (final IOException e2) {
-                assertEquals(exception, e2);
-            }
-        }
-
-        // Test the read() method
-        try {
-            reader.read();
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertTrue(reader.isCauseOf(e));
-            try {
-                reader.throwIfCauseOf(e);
-                fail("Expected exception not thrown.");
-            } catch (final IOException e2) {
-                assertEquals(exception, e2);
-            }
-        }
-
-        // Test the close() method
-        try {
-            reader.close();
-            fail("Expected exception not thrown.");
-        } catch (final IOException e) {
-            assertTrue(reader.isCauseOf(e));
-            try {
-                reader.throwIfCauseOf(e);
-                fail("Expected exception not thrown.");
-            } catch (final IOException e2) {
-                assertEquals(exception, e2);
-            }
-        }
-    }
-
-    @Test
     public void testOtherException() throws Exception {
         final IOException exception = new IOException("test exception");
-        try (final TaggedReader reader = new TaggedReader(ClosedReader.CLOSED_READER)) {
+        try (TaggedReader reader = new TaggedReader(ClosedReader.INSTANCE)) {
 
             assertFalse(reader.isCauseOf(exception));
             assertFalse(reader.isCauseOf(new TaggedIOException(exception, UUID.randomUUID())));

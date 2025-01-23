@@ -32,14 +32,20 @@ import java.util.Random;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** This is more an example than a test - deserialize our {@link MoreComplexObject}
- *  to verify which settings it requires, as the object uses a number of primitive
- *  and java.* member objects.
+/**
+ * This is more an example than a test - deserialize our {@link MoreComplexObject}
+ * to verify which settings it requires, as the object uses a number of primitive
+ * and java.* member objects.
  */
 public class MoreComplexObjectTest extends AbstractCloseableListTest {
 
     private InputStream inputStream;
     private MoreComplexObject original;
+
+    private void assertSerialization(final ObjectInputStream ois) throws ClassNotFoundException, IOException {
+        final MoreComplexObject copy = (MoreComplexObject) ois.readObject();
+        assertEquals(original.toString(), copy.toString(), "Expecting same data after deserializing");
+    }
 
     @BeforeEach
     public void setupMoreComplexObject() throws IOException {
@@ -50,9 +56,16 @@ public class MoreComplexObjectTest extends AbstractCloseableListTest {
         inputStream = closeAfterEachTest(new ByteArrayInputStream(bos.toByteArray()));
     }
 
-    private void assertSerialization(final ObjectInputStream ois) throws ClassNotFoundException, IOException {
-        final MoreComplexObject copy = (MoreComplexObject) (ois.readObject());
-        assertEquals(original.toString(), copy.toString(), "Expecting same data after deserializing");
+    /** Trusting java.* is probably reasonable and avoids having to be too
+     *  detailed in the accepts.
+     */
+    @Test
+    public void testTrustJavaIncludingArrays() throws IOException, ClassNotFoundException {
+        assertSerialization(closeAfterEachTest(
+                new ValidatingObjectInputStream(inputStream)
+                .accept(MoreComplexObject.class)
+                .accept("java.*", "[Ljava.*")
+        ));
     }
 
     /** Trusting java.lang.* and the array variants of that means we have
@@ -60,23 +73,11 @@ public class MoreComplexObjectTest extends AbstractCloseableListTest {
      *  might become a bit verbose.
      */
     @Test
-    public void trustJavaLang() throws IOException, ClassNotFoundException {
+    public void testTrustJavaLang() throws IOException, ClassNotFoundException {
         assertSerialization(closeAfterEachTest(
                 new ValidatingObjectInputStream(inputStream)
                 .accept(MoreComplexObject.class, ArrayList.class, Random.class)
-                .accept("java.lang.*","[Ljava.lang.*")
-        ));
-    }
-
-    /** Trusting java.* is probably reasonable and avoids having to be too
-     *  detailed in the accepts.
-     */
-    @Test
-    public void trustJavaIncludingArrays() throws IOException, ClassNotFoundException {
-        assertSerialization(closeAfterEachTest(
-                new ValidatingObjectInputStream(inputStream)
-                .accept(MoreComplexObject.class)
-                .accept("java.*","[Ljava.*")
+                .accept("java.lang.*", "[Ljava.lang.*")
         ));
     }
 
@@ -87,7 +88,7 @@ public class MoreComplexObjectTest extends AbstractCloseableListTest {
      *  might be ok in controlled environments.
      */
     @Test
-    public void useBlacklist() throws IOException, ClassNotFoundException {
+    public void testUseBlacklist() throws IOException, ClassNotFoundException {
         final String [] blacklist = {
                 "org.apache.commons.collections.functors.InvokerTransformer",
                 "org.codehaus.groovy.runtime.ConvertedClosure",

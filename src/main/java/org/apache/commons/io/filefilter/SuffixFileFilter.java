@@ -23,8 +23,10 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.IOCase;
+import org.apache.commons.io.file.PathUtils;
 
 /**
  * Filters files based on the suffix (what the file name ends with).
@@ -35,7 +37,7 @@ import org.apache.commons.io.IOCase;
  * </p>
  * <h2>Using Classic IO</h2>
  * <pre>
- * File dir = new File(".");
+ * File dir = FileUtils.current();
  * String[] files = dir.list(new SuffixFileFilter(".java"));
  * for (String file : files) {
  *     System.out.println(file);
@@ -44,7 +46,7 @@ import org.apache.commons.io.IOCase;
  *
  * <h2>Using NIO</h2>
  * <pre>
- * final Path dir = Paths.get("");
+ * final Path dir = PathUtils.current();
  * final AccumulatorPathVisitor visitor = AccumulatorPathVisitor.withLongCounters(new SuffixFileFilter(".java"));
  * //
  * // Walk one dir
@@ -60,6 +62,10 @@ import org.apache.commons.io.IOCase;
  * System.out.println(visitor.getDirList());
  * System.out.println(visitor.getFileList());
  * </pre>
+ * <h2>Deprecating Serialization</h2>
+ * <p>
+ * <em>Serialization is deprecated and will be removed in 3.0.</em>
+ * </p>
  *
  * @since 1.0
  * @see FileFilterUtils#suffixFileFilter(String)
@@ -72,8 +78,8 @@ public class SuffixFileFilter extends AbstractFileFilter implements Serializable
     /** The file name suffixes to search for */
     private final String[] suffixes;
 
-    /** Whether the comparison is case sensitive. */
-    private final IOCase caseSensitivity;
+    /** Whether the comparison is case-sensitive. */
+    private final IOCase ioCase;
 
     /**
      * Constructs a new Suffix file filter for a list of suffixes.
@@ -91,17 +97,15 @@ public class SuffixFileFilter extends AbstractFileFilter implements Serializable
      * specifying case-sensitivity.
      *
      * @param suffixes  the suffixes to allow, must not be null
-     * @param caseSensitivity  how to handle case sensitivity, null means case-sensitive
+     * @param ioCase  how to handle case sensitivity, null means case-sensitive
      * @throws IllegalArgumentException if the suffix list is null
      * @throws ClassCastException if the list does not contain Strings
      * @since 1.4
      */
-    public SuffixFileFilter(final List<String> suffixes, final IOCase caseSensitivity) {
-        if (suffixes == null) {
-            throw new IllegalArgumentException("The list of suffixes must not be null");
-        }
+    public SuffixFileFilter(final List<String> suffixes, final IOCase ioCase) {
+        Objects.requireNonNull(suffixes, "suffixes");
         this.suffixes = suffixes.toArray(EMPTY_STRING_ARRAY);
-        this.caseSensitivity = caseSensitivity == null ? IOCase.SENSITIVE : caseSensitivity;
+        this.ioCase = IOCase.value(ioCase, IOCase.SENSITIVE);
     }
 
     /**
@@ -121,7 +125,7 @@ public class SuffixFileFilter extends AbstractFileFilter implements Serializable
      * instance. This would be inadvisable however.
      *
      * @param suffixes  the suffixes to allow, must not be null
-     * @throws IllegalArgumentException if the suffix array is null
+     * @throws NullPointerException if the suffix array is null
      */
     public SuffixFileFilter(final String... suffixes) {
         this(suffixes, IOCase.SENSITIVE);
@@ -132,16 +136,14 @@ public class SuffixFileFilter extends AbstractFileFilter implements Serializable
      * specifying case-sensitivity.
      *
      * @param suffix  the suffix to allow, must not be null
-     * @param caseSensitivity  how to handle case sensitivity, null means case-sensitive
-     * @throws IllegalArgumentException if the suffix is null
+     * @param ioCase  how to handle case sensitivity, null means case-sensitive
+     * @throws NullPointerException if the suffix is null
      * @since 1.4
      */
-    public SuffixFileFilter(final String suffix, final IOCase caseSensitivity) {
-        if (suffix == null) {
-            throw new IllegalArgumentException("The suffix must not be null");
-        }
+    public SuffixFileFilter(final String suffix, final IOCase ioCase) {
+        Objects.requireNonNull(suffix, "suffix");
         this.suffixes = new String[] {suffix};
-        this.caseSensitivity = caseSensitivity == null ? IOCase.SENSITIVE : caseSensitivity;
+        this.ioCase = IOCase.value(ioCase, IOCase.SENSITIVE);
     }
 
     /**
@@ -149,17 +151,14 @@ public class SuffixFileFilter extends AbstractFileFilter implements Serializable
      * specifying case-sensitivity.
      *
      * @param suffixes  the suffixes to allow, must not be null
-     * @param caseSensitivity  how to handle case sensitivity, null means case-sensitive
-     * @throws IllegalArgumentException if the suffix array is null
+     * @param ioCase  how to handle case sensitivity, null means case-sensitive
+     * @throws NullPointerException if the suffix array is null
      * @since 1.4
      */
-    public SuffixFileFilter(final String[] suffixes, final IOCase caseSensitivity) {
-        if (suffixes == null) {
-            throw new IllegalArgumentException("The array of suffixes must not be null");
-        }
-        this.suffixes = new String[suffixes.length];
-        System.arraycopy(suffixes, 0, this.suffixes, 0, suffixes.length);
-        this.caseSensitivity = caseSensitivity == null ? IOCase.SENSITIVE : caseSensitivity;
+    public SuffixFileFilter(final String[] suffixes, final IOCase ioCase) {
+        Objects.requireNonNull(suffixes, "suffixes");
+        this.suffixes = suffixes.clone();
+        this.ioCase = IOCase.value(ioCase, IOCase.SENSITIVE);
     }
 
     /**
@@ -187,23 +186,18 @@ public class SuffixFileFilter extends AbstractFileFilter implements Serializable
 
     /**
      * Checks to see if the file name ends with the suffix.
-     * @param file  the File to check
+     * @param path  the File to check
      *
      * @return true if the file name ends with one of our suffixes
      * @since 2.9.0
      */
     @Override
-    public FileVisitResult accept(final Path file, final BasicFileAttributes attributes) {
-        return toFileVisitResult(accept(Objects.toString(file.getFileName(), null)), file);
+    public FileVisitResult accept(final Path path, final BasicFileAttributes attributes) {
+        return toFileVisitResult(accept(PathUtils.getFileNameString(path)));
     }
 
     private boolean accept(final String name) {
-        for (final String suffix : this.suffixes) {
-            if (caseSensitivity.checkEndsWith(name, suffix)) {
-                return true;
-            }
-        }
-        return false;
+        return Stream.of(suffixes).anyMatch(suffix -> ioCase.checkEndsWith(name, suffix));
     }
 
     /**
@@ -216,14 +210,7 @@ public class SuffixFileFilter extends AbstractFileFilter implements Serializable
         final StringBuilder buffer = new StringBuilder();
         buffer.append(super.toString());
         buffer.append("(");
-        if (suffixes != null) {
-            for (int i = 0; i < suffixes.length; i++) {
-                if (i > 0) {
-                    buffer.append(",");
-                }
-                buffer.append(suffixes[i]);
-            }
-        }
+        append(suffixes, buffer);
         buffer.append(")");
         return buffer.toString();
     }

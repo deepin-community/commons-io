@@ -16,12 +16,17 @@
  */
 package org.apache.commons.io.monitor;
 
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadFactory;
+import java.util.stream.Stream;
+
+import org.apache.commons.io.ThreadUtils;
 
 /**
  * A runnable that spawns a monitoring thread triggering any
@@ -34,7 +39,7 @@ public final class FileAlterationMonitor implements Runnable {
 
     private static final FileAlterationObserver[] EMPTY_ARRAY = {};
 
-    private final long interval;
+    private final long intervalMillis;
     private final List<FileAlterationObserver> observers = new CopyOnWriteArrayList<>();
     private Thread thread;
     private ThreadFactory threadFactory;
@@ -44,17 +49,17 @@ public final class FileAlterationMonitor implements Runnable {
      * Constructs a monitor with a default interval of 10 seconds.
      */
     public FileAlterationMonitor() {
-        this(10000);
+        this(10_000);
     }
 
     /**
      * Constructs a monitor with the specified interval.
      *
-     * @param interval The amount of time in milliseconds to wait between
+     * @param intervalMillis The amount of time in milliseconds to wait between
      * checks of the file system.
      */
-    public FileAlterationMonitor(final long interval) {
-        this.interval = interval;
+    public FileAlterationMonitor(final long intervalMillis) {
+        this.intervalMillis = intervalMillis;
     }
 
     /**
@@ -86,28 +91,8 @@ public final class FileAlterationMonitor implements Runnable {
     public FileAlterationMonitor(final long interval, final FileAlterationObserver... observers) {
         this(interval);
         if (observers != null) {
-            for (final FileAlterationObserver observer : observers) {
-                addObserver(observer);
-            }
+            Stream.of(observers).forEach(this::addObserver);
         }
-    }
-
-    /**
-     * Returns the interval.
-     *
-     * @return the interval
-     */
-    public long getInterval() {
-        return interval;
-    }
-
-    /**
-     * Sets the thread factory.
-     *
-     * @param threadFactory the thread factory
-     */
-    public synchronized void setThreadFactory(final ThreadFactory threadFactory) {
-        this.threadFactory = threadFactory;
     }
 
     /**
@@ -122,16 +107,12 @@ public final class FileAlterationMonitor implements Runnable {
     }
 
     /**
-     * Removes a file system observer from this monitor.
+     * Returns the interval.
      *
-     * @param observer The file system observer to remove
+     * @return the interval
      */
-    public void removeObserver(final FileAlterationObserver observer) {
-        if (observer != null) {
-            while (observers.remove(observer)) {
-                // empty
-            }
-        }
+    public long getInterval() {
+        return intervalMillis;
     }
 
     /**
@@ -141,7 +122,45 @@ public final class FileAlterationMonitor implements Runnable {
      * @return The set of {@link FileAlterationObserver}
      */
     public Iterable<FileAlterationObserver> getObservers() {
-        return observers;
+        return new ArrayList<>(observers);
+    }
+
+    /**
+     * Removes a file system observer from this monitor.
+     *
+     * @param observer The file system observer to remove
+     */
+    public void removeObserver(final FileAlterationObserver observer) {
+        if (observer != null) {
+            observers.removeIf(observer::equals);
+        }
+    }
+
+    /**
+     * Runs this monitor.
+     */
+    @Override
+    public void run() {
+        while (running) {
+            observers.forEach(FileAlterationObserver::checkAndNotify);
+            if (!running) {
+                break;
+            }
+            try {
+                ThreadUtils.sleep(Duration.ofMillis(intervalMillis));
+            } catch (final InterruptedException ignored) {
+                // ignore
+            }
+        }
+    }
+
+    /**
+     * Sets the thread factory.
+     *
+     * @param threadFactory the thread factory
+     */
+    public synchronized void setThreadFactory(final ThreadFactory threadFactory) {
+        this.threadFactory = threadFactory;
     }
 
     /**
@@ -171,7 +190,7 @@ public final class FileAlterationMonitor implements Runnable {
      * @throws Exception if an error occurs initializing the observer
      */
     public synchronized void stop() throws Exception {
-        stop(interval);
+        stop(intervalMillis);
     }
 
     /**
@@ -195,26 +214,6 @@ public final class FileAlterationMonitor implements Runnable {
         }
         for (final FileAlterationObserver observer : observers) {
             observer.destroy();
-        }
-    }
-
-    /**
-     * Runs this monitor.
-     */
-    @Override
-    public void run() {
-        while (running) {
-            for (final FileAlterationObserver observer : observers) {
-                observer.checkAndNotify();
-            }
-            if (!running) {
-                break;
-            }
-            try {
-                Thread.sleep(interval);
-            } catch (final InterruptedException ignored) {
-                // ignore
-            }
         }
     }
 }
